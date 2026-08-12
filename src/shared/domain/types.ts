@@ -58,10 +58,17 @@ export type GridSettings = {
   metersPerCell: number;
 };
 
+/**
+ * Что за план: карта павильона со стендами или площадка одного стенда.
+ * Поле необязательное — планы, сохранённые до его появления, считаются планом выставки.
+ */
+export type FloorPlanKind = "expo" | "stand";
+
 export type FloorPlan = {
   id: string;
   exhibitionId: string;
   title: string;
+  kind?: FloorPlanKind;
   width: number;
   height: number;
   background: BackgroundImage | null;

@@ -1,6 +1,17 @@
 import { create } from "zustand";
 import { getFurnitureItem } from "../../../shared/domain/furniture";
-import { getCanvasObject, getFloorPlan, getFloorPlanObjects, getObjectFurnitureMeta, getObjectPoints, getObjectStandMeta, withPolygonPoints } from "../../../shared/domain/project";
+import {
+  createStandFloorPlan,
+  findFloorPlanByKind,
+  formatMeters,
+  getCanvasObject,
+  getFloorPlan,
+  getFloorPlanObjects,
+  getObjectFurnitureMeta,
+  getObjectPoints,
+  getObjectStandMeta,
+  withPolygonPoints,
+} from "../../../shared/domain/project";
 import type {
   AppMode,
   CanvasObject,
@@ -8,6 +19,7 @@ import type {
   EditorTool,
   ExhibitionProject,
   FloorPlan,
+  FloorPlanKind,
   LayerKind,
   Point,
   StandStatus,
@@ -50,6 +62,10 @@ type EditorState = {
   addFurniture: (itemId: string, position: Point) => void;
   moveFurniture: (objectId: string, origin: Point) => void;
   rotateFurniture: (objectId: string) => void;
+  /** Переключает редактор между картой павильона и площадкой стенда. */
+  showFloorPlanKind: (kind: FloorPlanKind) => void;
+  /** Меняет габариты площадки стенда в метрах. */
+  resizeStandPlan: (widthM: number, depthM: number) => void;
   zoomIn: () => void;
   zoomOut: () => void;
   fitToScreen: () => void;
@@ -278,6 +294,50 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       objects: project.objects.map((item) => (item.id === objectId ? nextObject : item)),
     });
   },
+  showFloorPlanKind: (kind) => {
+    const project = get().project;
+    if (!project) return;
+
+    const existing = findFloorPlanByKind(project, kind);
+    if (existing) {
+      set({ activeFloorPlanId: existing.id, selectedObjectId: null, draftPoints: [], validationMessage: null });
+      return;
+    }
+
+    if (kind !== "stand") return;
+
+    // Площадка стенда создаётся при первом переходе на неё.
+    const exhibitionId = project.exhibitions[0]?.id ?? project.floorPlans[0]?.exhibitionId ?? "expo-local";
+    const { plan, layers } = createStandFloorPlan(exhibitionId);
+
+    commitProject(set, get, {
+      ...project,
+      floorPlans: [...project.floorPlans, plan],
+      layers: [...project.layers, ...layers],
+    });
+    set({ activeFloorPlanId: plan.id, selectedObjectId: null, draftPoints: [], validationMessage: null });
+  },
+  resizeStandPlan: (widthM, depthM) => {
+    const project = get().project;
+    const plan = findFloorPlanByKind(project, "stand");
+    if (!project || !plan) return;
+
+    const safeWidth = clampMeters(widthM);
+    const safeDepth = clampMeters(depthM);
+    const pxPerMeter = plan.grid.cellSizePx / plan.grid.metersPerCell;
+
+    const nextPlan: FloorPlan = {
+      ...plan,
+      title: `Стенд ${formatMeters(safeWidth)} x ${formatMeters(safeDepth)} м`,
+      width: safeWidth * pxPerMeter,
+      height: safeDepth * pxPerMeter,
+    };
+
+    commitProject(set, get, {
+      ...project,
+      floorPlans: project.floorPlans.map((item) => (item.id === plan.id ? nextPlan : item)),
+    });
+  },
   zoomIn: () => set(({ viewport }) => ({ viewport: { ...viewport, scale: Math.min(viewport.scale + 0.1, 3) } })),
   zoomOut: () => set(({ viewport }) => ({ viewport: { ...viewport, scale: Math.max(viewport.scale - 0.1, 0.15) } })),
   fitToScreen: () => set({ viewport: defaultViewport }),
@@ -336,6 +396,12 @@ function getStandLayerId(project: ExhibitionProject, floorPlanId: string): strin
 
 function getLayerId(project: ExhibitionProject, floorPlanId: string, kind: LayerKind): string {
   return project.layers.find((layer) => layer.floorPlanId === floorPlanId && layer.kind === kind)?.id ?? `${floorPlanId}-${kind}`;
+}
+
+/** Габариты площадки: меньше метра не бывает, больше 50 — это уже не стенд. */
+function clampMeters(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 1;
+  return Math.min(Math.max(value, 1), 50);
 }
 
 function createId(prefix: string): string {

@@ -6,7 +6,7 @@ import { PlanCanvas } from "../features/plan-editor/components/PlanCanvas";
 import { PropertiesPanel } from "../features/plan-editor/components/PropertiesPanel";
 import { Toolbar } from "../features/plan-editor/components/Toolbar";
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
-import { getFloorPlan, getFloorPlanLayers } from "../shared/domain/project";
+import { defaultStandSizeM, getFloorPlan, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
 import { bitrixCrmProvider } from "../shared/crm/bitrixCrmProvider";
 import type { EditorScreen } from "../shared/domain/types";
 import { localPlanRepository } from "../shared/storage/localPlanRepository";
@@ -26,6 +26,8 @@ export function App() {
   const zoomOut = useEditorStore((state) => state.zoomOut);
   const fitToScreen = useEditorStore((state) => state.fitToScreen);
   const updateFloorPlanGrid = useEditorStore((state) => state.updateFloorPlanGrid);
+  const showFloorPlanKind = useEditorStore((state) => state.showFloorPlanKind);
+  const resizeStandPlan = useEditorStore((state) => state.resizeStandPlan);
   const setFloorPlanBackground = useEditorStore((state) => state.setFloorPlanBackground);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
@@ -36,6 +38,10 @@ export function App() {
   const historyFutureLength = useEditorStore((state) => state.historyFuture.length);
   const activePlan = useMemo(() => getFloorPlan(project, activeFloorPlanId), [activeFloorPlanId, project]);
   const planLayers = useMemo(() => getFloorPlanLayers(project, activeFloorPlanId), [activeFloorPlanId, project]);
+  const standSize = useMemo(
+    () => (activePlan && screen === "stand" ? getStandSizeMeters(activePlan) : defaultStandSizeM),
+    [activePlan, screen],
+  );
 
   useEffect(() => {
     void localPlanRepository.load().then(loadProject).catch((error: unknown) => {
@@ -55,6 +61,12 @@ export function App() {
 
     return () => window.clearTimeout(timer);
   }, [isDirty, project, saveWorkspace]);
+
+  const openScreen = (next: EditorScreen) => {
+    setScreen(next);
+    showFloorPlanKind(next);
+    fitToScreen();
+  };
 
   const handleSave = async () => {
     const snapshot = useEditorStore.getState().createSnapshot();
@@ -90,10 +102,10 @@ export function App() {
         </div>
 
         <div className="mode-switch" role="group" aria-label="Экран">
-          <button className={screen === "expo" ? "is-active" : ""} onClick={() => setScreen("expo")}>
+          <button className={screen === "expo" ? "is-active" : ""} onClick={() => openScreen("expo")}>
             Общий план
           </button>
-          <button className={screen === "stand" ? "is-active" : ""} onClick={() => setScreen("stand")}>
+          <button className={screen === "stand" ? "is-active" : ""} onClick={() => openScreen("stand")}>
             План стенда
           </button>
         </div>
@@ -136,7 +148,52 @@ export function App() {
           <p>{startupError ?? "Сетка обязательна: все вершины стендов привязываются к узлам. Новый стенд создаётся кликами по сетке, замыкается кликом по первой точке."}</p>
         </div>
 
-        {activePlan ? (
+        {activePlan && screen === "stand" ? (
+          <div className="panel-section grid-settings">
+            <h2>Размер стенда</h2>
+            <div className="stand-size">
+              <label>
+                Ширина, м
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  step={0.5}
+                  value={standSize.width}
+                  onChange={(event) => resizeStandPlan(Number(event.target.value), standSize.depth)}
+                />
+              </label>
+              <label>
+                Глубина, м
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  step={0.5}
+                  value={standSize.depth}
+                  onChange={(event) => resizeStandPlan(standSize.width, Number(event.target.value))}
+                />
+              </label>
+            </div>
+
+            <div className="stand-presets">
+              {standPresets.map((preset) => (
+                <button
+                  key={`${preset.width}x${preset.depth}`}
+                  type="button"
+                  className={standSize.width === preset.width && standSize.depth === preset.depth ? "is-active" : ""}
+                  onClick={() => resizeStandPlan(preset.width, preset.depth)}
+                >
+                  {preset.width} x {preset.depth}
+                </button>
+              ))}
+            </div>
+
+            <p>Площадь стенда: {(standSize.width * standSize.depth).toFixed(1).replace(".", ",")} м². Клетка сетки — 1 x 1 м.</p>
+          </div>
+        ) : null}
+
+        {activePlan && screen === "expo" ? (
           <div className="panel-section grid-settings">
             <h2>Масштаб сетки</h2>
             <label>
@@ -179,6 +236,15 @@ export function App() {
     </div>
   );
 }
+
+/** Типовые размеры выставочных стендов. */
+const standPresets = [
+  { width: 3, depth: 3 },
+  { width: 4, depth: 3 },
+  { width: 6, depth: 3 },
+  { width: 6, depth: 4 },
+  { width: 9, depth: 6 },
+];
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
