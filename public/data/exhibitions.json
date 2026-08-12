@@ -1,0 +1,93 @@
+{
+  "id": "project-cbsss-2024",
+  "title": "ЦБССС 24",
+  "exhibitions": [
+    {
+      "id": "expo-cbsss-2024",
+      "title": "ЦБССС 24",
+      "date": "2026-09-18",
+      "description": "Демонстрационный проект редактора выставочных планов."
+    }
+  ],
+  "floorPlans": [
+    {
+      "id": "plan-main",
+      "exhibitionId": "expo-cbsss-2024",
+      "title": "Павильон 1",
+      "width": 2161,
+      "height": 1614,
+      "background": {
+        "name": "cbsss2024.jpg",
+        "imageUrl": "/web_app1/img/cbsss2024.jpg",
+        "width": 2161,
+        "height": 1614
+      },
+      "grid": {
+        "enabled": true,
+        "snap": true,
+        "cellSizePx": 24,
+        "metersPerCell": 1
+      }
+    }
+  ],
+  "layers": [
+    { "id": "plan-main-background", "floorPlanId": "plan-main", "kind": "background", "name": "Фон", "visible": true, "locked": false, "order": 0 },
+    { "id": "plan-main-passages", "floorPlanId": "plan-main", "kind": "passages", "name": "Проходы", "visible": true, "locked": false, "order": 1 },
+    { "id": "plan-main-columns", "floorPlanId": "plan-main", "kind": "columns", "name": "Колонны", "visible": true, "locked": false, "order": 2 },
+    { "id": "plan-main-walls", "floorPlanId": "plan-main", "kind": "walls", "name": "Стены", "visible": true, "locked": false, "order": 3 },
+    { "id": "plan-main-stands", "floorPlanId": "plan-main", "kind": "stands", "name": "Стенды", "visible": true, "locked": false, "order": 4 },
+    { "id": "plan-main-selection", "floorPlanId": "plan-main", "kind": "selection", "name": "Выделение", "visible": true, "locked": false, "order": 5 }
+  ],
+  "objects": [
+    {
+      "id": "stand-a10",
+      "floorPlanId": "plan-main",
+      "layerId": "plan-main-stands",
+      "kind": "stand",
+      "name": "A10",
+      "shape": {
+        "kind": "rectangle",
+        "origin": { "x": 120, "y": 120 },
+        "width": 120,
+        "height": 96
+      },
+      "meta": {
+        "stand": {
+          "number": "A10",
+          "status": "available",
+          "dealId": null,
+          "note": "Стартовый прямоугольный стенд."
+        }
+      }
+    },
+    {
+      "id": "stand-b20",
+      "floorPlanId": "plan-main",
+      "layerId": "plan-main-stands",
+      "kind": "stand",
+      "name": "B20",
+      "shape": {
+        "kind": "polygon",
+        "points": [
+          { "x": 336, "y": 168 },
+          { "x": 480, "y": 168 },
+          { "x": 480, "y": 240 },
+          { "x": 432, "y": 240 },
+          { "x": 432, "y": 312 },
+          { "x": 336, "y": 312 }
+        ]
+      },
+      "meta": {
+        "stand": {
+          "number": "B20",
+          "status": "reserved",
+          "dealId": "18452",
+          "note": "Пример полигонального стенда."
+        }
+      }
+    }
+  ],
+  "settings": {
+    "autosave": true
+  }
+}
