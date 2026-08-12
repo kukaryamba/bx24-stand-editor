@@ -25,6 +25,43 @@ export type FurnitureItem = {
   depthM: number;
   image: string;
   round?: boolean;
+  /**
+   * Цена за штуку, рублей. Сейчас не заполнена ни у одной позиции:
+   * цены лежат в каталоге Битрикс24 и подставятся после подключения к порталу.
+   */
+  priceRub?: number;
+};
+
+/** Строка спецификации: предмет с плана, посчитанный по количеству. */
+export type SpecificationRow = {
+  itemId: string;
+  catalogId: string;
+  title: string;
+  category: FurnitureCategory;
+  quantity: number;
+  unit: string;
+  /** Заполняется, когда в каталоге появятся цены. */
+  priceRub?: number;
+  sumRub?: number;
+};
+
+export type SpecificationGroup = {
+  category: FurnitureCategory;
+  title: string;
+  rows: SpecificationRow[];
+};
+
+export type Specification = {
+  groups: SpecificationGroup[];
+  /** Всего предметов на плане. */
+  itemsCount: number;
+  areaM2: number;
+  perimeterM: number;
+  /** Суммарная длина расставленных стеновых панелей, метры. */
+  wallLengthM: number;
+  totalRub?: number;
+  /** Есть ли позиции без номера в каталоге — они не попадут в смету CRM. */
+  itemsWithoutCatalogId: number;
 };
 
 export type StandStatus = "available" | "reserved" | "sold" | "construction" | "unavailable";

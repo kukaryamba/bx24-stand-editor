@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Grid2x2, Hand, ImageUp, MousePointer2, PenTool, Redo2, Save, Undo2, ZoomIn, ZoomOut } from "lucide-react";
+import { FileText, Grid2x2, Hand, ImageUp, MousePointer2, PenTool, Redo2, Save, Undo2, ZoomIn, ZoomOut } from "lucide-react";
 import { DealSyncPanel } from "../features/plan-editor/components/DealSyncPanel";
 import { FurniturePalette } from "../features/plan-editor/components/FurniturePalette";
 import { PlanCanvas } from "../features/plan-editor/components/PlanCanvas";
 import { PropertiesPanel } from "../features/plan-editor/components/PropertiesPanel";
+import { SpecificationDialog } from "../features/plan-editor/components/SpecificationDialog";
 import { Toolbar } from "../features/plan-editor/components/Toolbar";
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
 import { defaultStandSizeM, getFloorPlan, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
@@ -14,6 +15,7 @@ import { localPlanRepository } from "../shared/storage/localPlanRepository";
 export function App() {
   const [startupError, setStartupError] = useState<string | null>(null);
   const [screen, setScreen] = useState<EditorScreen>("expo");
+  const [showSpecification, setShowSpecification] = useState(false);
   const backgroundUploadRef = useRef<HTMLInputElement | null>(null);
   const mode = useEditorStore((state) => state.mode);
   const tool = useEditorStore((state) => state.tool);
@@ -213,6 +215,16 @@ export function App() {
         ) : null}
 
         {screen === "stand" ? <FurniturePalette /> : null}
+
+        {screen === "stand" ? (
+          <div className="panel-section">
+            <button className="primary-action" onClick={() => setShowSpecification(true)}>
+              <FileText size={16} aria-hidden />
+              Спецификация
+            </button>
+          </div>
+        ) : null}
+
         {screen === "stand" ? <DealSyncPanel /> : null}
 
         {planLayers.length > 0 ? (
@@ -233,6 +245,8 @@ export function App() {
       </main>
 
       <PropertiesPanel />
+
+      {showSpecification ? <SpecificationDialog onClose={() => setShowSpecification(false)} /> : null}
     </div>
   );
 }
