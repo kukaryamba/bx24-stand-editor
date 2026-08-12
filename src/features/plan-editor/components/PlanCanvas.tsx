@@ -177,7 +177,12 @@ export function PlanCanvas() {
         onClick={handleStageClick}
         onWheel={handleWheel}
         draggable={tool === "pan"}
-        onDragEnd={(event) => setViewport({ x: event.target.x(), y: event.target.y() })}
+        onDragEnd={(event) => {
+          // Событие всплывает от перетащенного стенда или предмета, поэтому
+          // сдвигаем вид только если тянули сам холст, а не то, что на нём лежит.
+          if (event.target !== event.target.getStage()) return;
+          setViewport({ x: event.target.x(), y: event.target.y() });
+        }}
       >
         <Layer listening={false}>
           <Rect width={floorPlan.width} height={floorPlan.height} fill="#f8fafb" stroke="#c8ced6" strokeWidth={2} />
