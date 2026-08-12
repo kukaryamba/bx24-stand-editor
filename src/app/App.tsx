@@ -9,6 +9,7 @@ import { exportPlanToPng } from "../features/plan-editor/exportPlanImage";
 import { Toolbar } from "../features/plan-editor/components/Toolbar";
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
 import { defaultStandSizeM, getFloorPlan, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
+import { standTemplates } from "../shared/domain/standTemplates";
 import { bitrixCrmProvider } from "../shared/crm/bitrixCrmProvider";
 import type { EditorScreen } from "../shared/domain/types";
 import { localPlanRepository } from "../shared/storage/localPlanRepository";
@@ -31,6 +32,7 @@ export function App() {
   const updateFloorPlanGrid = useEditorStore((state) => state.updateFloorPlanGrid);
   const showFloorPlanKind = useEditorStore((state) => state.showFloorPlanKind);
   const resizeStandPlan = useEditorStore((state) => state.resizeStandPlan);
+  const applyStandTemplate = useEditorStore((state) => state.applyStandTemplate);
   const setFloorPlanBackground = useEditorStore((state) => state.setFloorPlanBackground);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
@@ -205,6 +207,22 @@ export function App() {
             </div>
 
             <p>Площадь стенда: {(standSize.width * standSize.depth).toFixed(1).replace(".", ",")} м². Клетка сетки — 1 x 1 м.</p>
+
+            <h2>Схема стенда</h2>
+            <div className="stand-templates">
+              {standTemplates.map((template) => (
+                <button
+                  key={template.id}
+                  type="button"
+                  onClick={() => applyStandTemplate(template.id)}
+                  title={template.description}
+                >
+                  <strong>{template.title}</strong>
+                  <span>{template.description}</span>
+                </button>
+              ))}
+            </div>
+            <p>Схема расставляет стены по периметру. Мебель остаётся на месте, прежние стены заменяются.</p>
           </div>
         ) : null}
 

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { getFurnitureItem } from "../../../shared/domain/furniture";
+import { buildTemplateWalls, standTemplates, type StandTemplateId } from "../../../shared/domain/standTemplates";
 import {
   createStandFloorPlan,
   findFloorPlanByKind,
@@ -66,6 +67,8 @@ type EditorState = {
   showFloorPlanKind: (kind: FloorPlanKind) => void;
   /** Меняет габариты площадки стенда в метрах. */
   resizeStandPlan: (widthM: number, depthM: number) => void;
+  /** Расставляет стены по типовой схеме, заменяя прежние. */
+  applyStandTemplate: (templateId: StandTemplateId) => void;
   zoomIn: () => void;
   zoomOut: () => void;
   fitToScreen: () => void;
@@ -337,6 +340,26 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...project,
       floorPlans: project.floorPlans.map((item) => (item.id === plan.id ? nextPlan : item)),
     });
+  },
+  applyStandTemplate: (templateId) => {
+    const project = get().project;
+    const plan = findFloorPlanByKind(project, "stand");
+    const template = standTemplates.find((item) => item.id === templateId);
+    if (!project || !plan || !template) return;
+
+    const layerId = getLayerId(project, plan.id, "stands");
+    const walls = buildTemplateWalls(template, plan, layerId, createId);
+
+    // Прежние стены заменяются, остальная мебель остаётся на месте.
+    const kept = project.objects.filter((object) => {
+      if (object.floorPlanId !== plan.id) return true;
+      const meta = getObjectFurnitureMeta(object);
+      if (!meta) return true;
+      return getFurnitureItem(meta.itemId)?.category !== "walls";
+    });
+
+    commitProject(set, get, { ...project, objects: [...kept, ...walls] });
+    set({ selectedObjectId: null, validationMessage: null });
   },
   zoomIn: () => set(({ viewport }) => ({ viewport: { ...viewport, scale: Math.min(viewport.scale + 0.1, 3) } })),
   zoomOut: () => set(({ viewport }) => ({ viewport: { ...viewport, scale: Math.max(viewport.scale - 0.1, 0.15) } })),
