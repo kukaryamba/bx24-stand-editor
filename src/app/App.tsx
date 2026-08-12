@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Grid2x2, Hand, ImageUp, MousePointer2, PenTool, Redo2, Save, Undo2, ZoomIn, ZoomOut } from "lucide-react";
+import { Download, FileText, Grid2x2, Hand, ImageUp, MousePointer2, PenTool, Redo2, Save, Undo2, ZoomIn, ZoomOut } from "lucide-react";
 import { DealSyncPanel } from "../features/plan-editor/components/DealSyncPanel";
 import { FurniturePalette } from "../features/plan-editor/components/FurniturePalette";
 import { PlanCanvas } from "../features/plan-editor/components/PlanCanvas";
 import { PropertiesPanel } from "../features/plan-editor/components/PropertiesPanel";
 import { SpecificationDialog } from "../features/plan-editor/components/SpecificationDialog";
+import { exportPlanToPng } from "../features/plan-editor/exportPlanImage";
 import { Toolbar } from "../features/plan-editor/components/Toolbar";
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
 import { defaultStandSizeM, getFloorPlan, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
@@ -68,6 +69,17 @@ export function App() {
     setScreen(next);
     showFloorPlanKind(next);
     fitToScreen();
+  };
+
+  const handleExportPng = () => {
+    if (!activePlan) return;
+
+    try {
+      exportPlanToPng(activePlan);
+      setStartupError(null);
+    } catch (error) {
+      setStartupError(error instanceof Error ? error.message : "Не удалось сохранить картинку плана.");
+    }
   };
 
   const handleSave = async () => {
@@ -140,6 +152,7 @@ export function App() {
             { icon: ZoomIn, label: "Fit", onClick: fitToScreen },
             { icon: ZoomIn, label: "Увеличить", onClick: zoomIn },
             { icon: ZoomOut, label: "Уменьшить", onClick: zoomOut },
+            { icon: Download, label: "Скачать PNG", onClick: handleExportPng },
             { icon: Save, label: "Сохранить JSON", tone: "primary", onClick: handleSave },
           ]}
         />

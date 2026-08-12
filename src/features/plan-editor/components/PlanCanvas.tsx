@@ -8,12 +8,14 @@ import type { CanvasObject, Point } from "../../../shared/domain/types";
 import { flattenPoints, polygonArea, polygonCentroid, snapPoint } from "../../../shared/geometry/polygon";
 import { useEditorStore } from "../store/editorStore";
 import { useImage } from "../hooks/useImage";
+import { registerStage } from "../stageRegistry";
 
 const closeDistance = 10;
 const keyboardPanStep = 42;
 
 export function PlanCanvas() {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const stageRef = useRef<Konva.Stage | null>(null);
   const [stageSize, setStageSize] = useState({ width: 1100, height: 760 });
   const project = useEditorStore((state) => state.project);
   const activeFloorPlanId = useEditorStore((state) => state.activeFloorPlanId);
@@ -161,6 +163,10 @@ export function PlanCanvas() {
   return (
     <div className="canvas-wrap" ref={containerRef}>
       <Stage
+        ref={(node) => {
+          stageRef.current = node;
+          registerStage(node);
+        }}
         width={stageSize.width}
         height={stageSize.height}
         x={viewport.x}
