@@ -12,11 +12,14 @@ import { registerStage } from "../stageRegistry";
 
 const closeDistance = 10;
 const keyboardPanStep = 42;
+/** Средняя кнопка мыши — колёсико. */
+const middleMouseButton = 1;
 
 export function PlanCanvas() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
   const [stageSize, setStageSize] = useState({ width: 1100, height: 760 });
+  const [middleButtonPanning, setMiddleButtonPanning] = useState(false);
   const project = useEditorStore((state) => state.project);
   const activeFloorPlanId = useEditorStore((state) => state.activeFloorPlanId);
   const selectedObjectId = useEditorStore((state) => state.selectedObjectId);
@@ -82,6 +85,25 @@ export function PlanCanvas() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [rotateFurniture, selectedObjectId, setViewport, viewport.x, viewport.y]);
 
+  useEffect(() => {
+    if (!middleButtonPanning) return;
+
+    // Кнопку могли отпустить за пределами холста — иначе панорама залипнет.
+    const stopPanning = (event: MouseEvent) => {
+      if (event.button !== middleMouseButton) return;
+
+      const stage = stageRef.current;
+      if (stage) {
+        stage.stopDrag();
+        setViewport({ x: stage.x(), y: stage.y() });
+      }
+      setMiddleButtonPanning(false);
+    };
+
+    window.addEventListener("mouseup", stopPanning);
+    return () => window.removeEventListener("mouseup", stopPanning);
+  }, [middleButtonPanning, setViewport]);
+
   if (!floorPlan) {
     return <div className="empty-state">Загрузка плана...</div>;
   }
@@ -100,6 +122,8 @@ export function PlanCanvas() {
   };
 
   const handleStageClick = (event: Konva.KonvaEventObject<MouseEvent>) => {
+    // Средней и правой кнопкой вершины не ставим.
+    if (event.evt.button !== 0) return;
     if (tool !== "polygon") return;
     const stage = event.target.getStage();
     if (!stage) return;
@@ -152,6 +176,31 @@ export function PlanCanvas() {
     moveFurniture(object.id, origin);
   };
 
+  /**
+   * Панорама средней кнопкой мыши — как в графических редакторах.
+   * Работает при любом выбранном инструменте, не сбивая текущий режим.
+   */
+  const handleStageMouseDown = (event: Konva.KonvaEventObject<MouseEvent>) => {
+    if (event.evt.button !== middleMouseButton) return;
+
+    // Иначе браузер включит свой режим автопрокрутки.
+    event.evt.preventDefault();
+
+    const stage = event.target.getStage();
+    if (!stage) return;
+
+    setMiddleButtonPanning(true);
+    stage.startDrag();
+  };
+
+  const handleStageMouseUp = (event: Konva.KonvaEventObject<MouseEvent>) => {
+    if (event.evt.button !== middleMouseButton || !middleButtonPanning) return;
+
+    const stage = event.target.getStage();
+    stage?.stopDrag();
+    setMiddleButtonPanning(false);
+  };
+
   const handleVertexDragEnd = (object: CanvasObject, pointIndex: number, event: Konva.KonvaEventObject<DragEvent>) => {
     const nextPoint = floorPlan.grid.snap
       ? snapPoint({ x: event.target.x(), y: event.target.y() }, floorPlan.grid.cellSizePx)
@@ -162,7 +211,11 @@ export function PlanCanvas() {
   };
 
   return (
-    <div className="canvas-wrap" ref={containerRef}>
+    <div
+      className="canvas-wrap"
+      ref={containerRef}
+      style={{ cursor: middleButtonPanning ? "grabbing" : tool === "pan" ? "grab" : undefined }}
+    >
       <Stage
         ref={(node) => {
           stageRef.current = node;
@@ -176,7 +229,9 @@ export function PlanCanvas() {
         scaleY={viewport.scale}
         onClick={handleStageClick}
         onWheel={handleWheel}
-        draggable={tool === "pan"}
+        draggable={tool === "pan" || middleButtonPanning}
+        onMouseDown={handleStageMouseDown}
+        onMouseUp={handleStageMouseUp}
         onDragEnd={(event) => {
           // Событие всплывает от перетащенного стенда или предмета, поэтому
           // сдвигаем вид только если тянули сам холст, а не то, что на нём лежит.
