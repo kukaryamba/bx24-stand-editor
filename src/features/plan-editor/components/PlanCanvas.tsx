@@ -31,6 +31,7 @@ export function PlanCanvas() {
   const updateStand = useEditorStore((state) => state.updateStand);
   const moveFurniture = useEditorStore((state) => state.moveFurniture);
   const rotateFurniture = useEditorStore((state) => state.rotateFurniture);
+  const openStandPlan = useEditorStore((state) => state.openStandPlan);
   const setViewport = useEditorStore((state) => state.setViewport);
   const floorPlan = useMemo(() => getFloorPlan(project, activeFloorPlanId), [activeFloorPlanId, project]);
   const layers = useMemo(() => getFloorPlanLayers(project, activeFloorPlanId), [activeFloorPlanId, project]);
@@ -199,6 +200,7 @@ export function PlanCanvas() {
               metersPerCell={floorPlan.grid.metersPerCell}
               draggable={mode === "admin"}
               onSelect={() => selectObject(object.id)}
+              onOpen={() => openStandPlan(object.id)}
               onDragEnd={(event) => handleObjectDragEnd(object, event)}
             />
           ))}
@@ -251,10 +253,11 @@ type StandShapeProps = {
   cellSizePx: number;
   metersPerCell: number;
   onSelect: () => void;
+  onOpen: () => void;
   onDragEnd: (event: Konva.KonvaEventObject<DragEvent>) => void;
 };
 
-function StandShape({ object, selected, currentDeal, draggable, cellSizePx, metersPerCell, onSelect, onDragEnd }: StandShapeProps) {
+function StandShape({ object, selected, currentDeal, draggable, cellSizePx, metersPerCell, onSelect, onOpen, onDragEnd }: StandShapeProps) {
   const points = getObjectPoints(object);
   const center = polygonCentroid(points);
   const standMeta = getObjectStandMeta(object);
@@ -262,7 +265,7 @@ function StandShape({ object, selected, currentDeal, draggable, cellSizePx, mete
   const fill = currentDeal ? currentDealColor : statusColors[standMeta?.status ?? "available"];
 
   return (
-    <Group draggable={draggable} onClick={onSelect} onTap={onSelect} onDragEnd={onDragEnd}>
+    <Group draggable={draggable} onClick={onSelect} onTap={onSelect} onDblClick={onOpen} onDblTap={onOpen} onDragEnd={onDragEnd}>
       <Line
         points={flattenPoints(points)}
         closed

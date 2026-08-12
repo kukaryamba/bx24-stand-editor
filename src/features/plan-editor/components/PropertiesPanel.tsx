@@ -1,4 +1,4 @@
-import { Trash2 } from "lucide-react";
+import { LayoutGrid, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 import { getFurnitureItem } from "../../../shared/domain/furniture";
 import { getCanvasObject, getFloorPlan, getObjectFurnitureMeta, getObjectPoints, getObjectStandMeta } from "../../../shared/domain/project";
@@ -16,6 +16,7 @@ export function PropertiesPanel() {
   const updateStand = useEditorStore((state) => state.updateStand);
   const deleteObject = useEditorStore((state) => state.deleteObject);
   const rotateFurniture = useEditorStore((state) => state.rotateFurniture);
+  const openStandPlan = useEditorStore((state) => state.openStandPlan);
   const plan = useMemo(() => getFloorPlan(project, activeFloorPlanId), [activeFloorPlanId, project]);
   const object = useMemo(() => getCanvasObject(project, selectedObjectId), [project, selectedObjectId]);
   const stand = object && object.kind === "stand" ? getObjectStandMeta(object) : null;
@@ -117,8 +118,13 @@ export function PropertiesPanel() {
             </div>
           </dl>
 
+          <button className="primary-action" onClick={() => openStandPlan(object.id)}>
+            <LayoutGrid size={16} aria-hidden />
+            Открыть план стенда
+          </button>
+
           {crm.dealId ? (
-            <button className="primary-action" onClick={() => updateStand(object.id, { dealId: crm.dealId, status: "reserved" })}>
+            <button onClick={() => updateStand(object.id, { dealId: crm.dealId, status: "reserved" })}>
               Забронировать на текущую сделку
             </button>
           ) : null}

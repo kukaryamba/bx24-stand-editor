@@ -5,10 +5,11 @@ import { FurniturePalette } from "../features/plan-editor/components/FurniturePa
 import { PlanCanvas } from "../features/plan-editor/components/PlanCanvas";
 import { PropertiesPanel } from "../features/plan-editor/components/PropertiesPanel";
 import { SpecificationDialog } from "../features/plan-editor/components/SpecificationDialog";
+import { StandNavigator } from "../features/plan-editor/components/StandNavigator";
 import { exportPlanToPng } from "../features/plan-editor/exportPlanImage";
 import { Toolbar } from "../features/plan-editor/components/Toolbar";
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
-import { defaultStandSizeM, getFloorPlan, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
+import { defaultStandSizeM, getFloorPlan, getFloorPlanKind, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
 import { standTemplates } from "../shared/domain/standTemplates";
 import { bitrixCrmProvider } from "../shared/crm/bitrixCrmProvider";
 import type { EditorScreen } from "../shared/domain/types";
@@ -16,7 +17,6 @@ import { localPlanRepository } from "../shared/storage/localPlanRepository";
 
 export function App() {
   const [startupError, setStartupError] = useState<string | null>(null);
-  const [screen, setScreen] = useState<EditorScreen>("expo");
   const [showSpecification, setShowSpecification] = useState(false);
   const backgroundUploadRef = useRef<HTMLInputElement | null>(null);
   const mode = useEditorStore((state) => state.mode);
@@ -43,6 +43,9 @@ export function App() {
   const historyFutureLength = useEditorStore((state) => state.historyFuture.length);
   const activePlan = useMemo(() => getFloorPlan(project, activeFloorPlanId), [activeFloorPlanId, project]);
   const planLayers = useMemo(() => getFloorPlanLayers(project, activeFloorPlanId), [activeFloorPlanId, project]);
+  // Экран не хранится отдельно: он определяется тем, какой план открыт.
+  // Иначе переход в стенд с карты не переключал бы панели.
+  const screen: EditorScreen = getFloorPlanKind(activePlan);
   const standSize = useMemo(
     () => (activePlan && screen === "stand" ? getStandSizeMeters(activePlan) : defaultStandSizeM),
     [activePlan, screen],
@@ -68,7 +71,6 @@ export function App() {
   }, [isDirty, project, saveWorkspace]);
 
   const openScreen = (next: EditorScreen) => {
-    setScreen(next);
     showFloorPlanKind(next);
     fitToScreen();
   };
@@ -114,7 +116,7 @@ export function App() {
       <aside className="left-panel" aria-label="Панель инструментов">
         <div className="brand">
           <span className="brand__kicker">Bitrix24 Local App</span>
-          <h1>{screen === "expo" ? "План выставки" : "План стенда"}</h1>
+          <h1>{screen === "expo" ? "План выставки" : activePlan?.title ?? "План стенда"}</h1>
         </div>
 
         <div className="mode-switch" role="group" aria-label="Экран">
@@ -245,6 +247,7 @@ export function App() {
           </div>
         ) : null}
 
+        {screen === "stand" ? <StandNavigator /> : null}
         {screen === "stand" ? <FurniturePalette /> : null}
 
         {screen === "stand" ? (

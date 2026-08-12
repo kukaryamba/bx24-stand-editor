@@ -437,6 +437,58 @@ p {
   gap: 10px;
 }
 
+.stand-nav {
+  margin-top: 16px;
+}
+
+.stand-nav__back {
+  width: 100%;
+  min-height: 34px;
+  margin-bottom: 12px;
+  border: 1px solid #cfd6df;
+  background: #ffffff;
+  color: #0b57d0;
+}
+
+.stand-nav__list {
+  display: grid;
+  gap: 4px;
+  max-height: 190px;
+  overflow-y: auto;
+}
+
+.stand-nav__list button {
+  display: grid;
+  gap: 1px;
+  padding: 7px 10px;
+  border: 1px solid #d9dee7;
+  background: #ffffff;
+  color: #253141;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stand-nav__list button:hover {
+  border-color: #1a73e8;
+  background: #f4f8ff;
+}
+
+.stand-nav__list button.is-active {
+  border-color: #1a73e8;
+  background: #e8f0fe;
+}
+
+.stand-nav__list strong {
+  font-size: 13px;
+}
+
+.stand-nav__list span,
+.stand-nav__hint {
+  color: #6b7280;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .stand-templates {
   display: grid;
   gap: 6px;

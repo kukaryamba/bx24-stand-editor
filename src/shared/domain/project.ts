@@ -45,9 +45,6 @@ export function getObjectStandMeta(object: CanvasObject): StandObjectMeta | null
   return object.kind === "stand" && object.meta.stand ? object.meta.stand : null;
 }
 
-/** Идентификатор плана стенда — он в проекте один. */
-export const standFloorPlanId = "plan-stand";
-
 /** Размеры площадки стенда по умолчанию, метры. */
 export const defaultStandSizeM = { width: 3, depth: 3 };
 
@@ -63,17 +60,37 @@ export function findFloorPlanByKind(project: ExhibitionProject | null, kind: "ex
   return project.floorPlans.find((plan) => getFloorPlanKind(plan) === kind) ?? null;
 }
 
-/** Создаёт площадку стенда заданных размеров вместе с её слоями. */
+/** Идентификатор площадки для конкретного стенда. */
+export function standPlanIdFor(standObjectId: string): string {
+  return `plan-stand-${standObjectId}`;
+}
+
+/** Площадка выбранного стенда, если она уже заведена. */
+export function findStandPlan(project: ExhibitionProject | null, standObjectId: string): FloorPlan | null {
+  if (!project) return null;
+  return project.floorPlans.find((plan) => plan.standObjectId === standObjectId) ?? null;
+}
+
+/** Все заведённые площадки стендов. */
+export function getStandPlans(project: ExhibitionProject | null): FloorPlan[] {
+  if (!project) return [];
+  return project.floorPlans.filter((plan) => getFloorPlanKind(plan) === "stand");
+}
+
+/** Создаёт площадку конкретного стенда вместе с её слоями. */
 export function createStandFloorPlan(
   exhibitionId: string,
+  standObjectId: string,
+  standNumber: string,
   widthM: number = defaultStandSizeM.width,
   depthM: number = defaultStandSizeM.depth,
 ): { plan: FloorPlan; layers: ProjectLayer[] } {
   const plan: FloorPlan = {
-    id: standFloorPlanId,
+    id: standPlanIdFor(standObjectId),
     exhibitionId,
-    title: `Стенд ${formatMeters(widthM)} x ${formatMeters(depthM)} м`,
+    title: `Стенд ${standNumber} — ${formatMeters(widthM)} x ${formatMeters(depthM)} м`,
     kind: "stand",
+    standObjectId,
     width: widthM * standCellSizePx,
     height: depthM * standCellSizePx,
     background: null,

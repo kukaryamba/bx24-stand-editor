@@ -106,6 +106,8 @@ export type FloorPlan = {
   exhibitionId: string;
   title: string;
   kind?: FloorPlanKind;
+  /** Для площадки стенда — какой стенд на общем плане она раскрывает. */
+  standObjectId?: string;
   width: number;
   height: number;
   background: BackgroundImage | null;

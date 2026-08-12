@@ -75,6 +75,19 @@ export function validateStandPolygon(points: Point[], plan: FloorPlan, objects: 
   return null;
 }
 
+/** Габариты полигона — прямоугольник, в который он вписан. */
+export function polygonBounds(points: Point[]): { width: number; height: number } {
+  if (points.length === 0) return { width: 0, height: 0 };
+
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+
+  return {
+    width: Math.max(...xs) - Math.min(...xs),
+    height: Math.max(...ys) - Math.min(...ys),
+  };
+}
+
 export function flattenPoints(points: Point[]): number[] {
   return points.flatMap((point) => [point.x, point.y]);
 }
