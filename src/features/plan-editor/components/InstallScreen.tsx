@@ -5,9 +5,10 @@ import { appHandlerUrl, bindDealTab, finishInstall } from "../../../shared/crm/b
  * Установка приложения в портал.
  *
  * В форме локального приложения место встраивания не выбирается — его
- * регистрирует само приложение. Портал один раз открывает эту страницу
- * (placement DEFAULT), здесь мы просим вкладку в карточке сделки и говорим
- * порталу, что установка закончена.
+ * регистрирует само приложение. Экран показывается всегда, когда приложение
+ * открыто в портале, но не во вкладке сделки: и на странице установки,
+ * и при открытии из списка интеграций. Так встраивание можно повторить,
+ * не переустанавливая приложение.
  */
 
 type InstallState =
@@ -15,7 +16,12 @@ type InstallState =
   | { kind: "done"; alreadyBound: boolean }
   | { kind: "error"; text: string };
 
-export function InstallScreen() {
+type InstallScreenProps = {
+  /** Открыть редактор, не выходя из портала. */
+  onContinue: () => void;
+};
+
+export function InstallScreen({ onContinue }: InstallScreenProps) {
   const [state, setState] = useState<InstallState>({ kind: "working" });
   const [attempt, setAttempt] = useState(0);
 
@@ -58,6 +64,9 @@ export function InstallScreen() {
                 : "Готово: приложение встроено в карточку сделки."}
             </p>
             <p>Откройте любую сделку — там появится вкладка «План стенда».</p>
+            <button className="primary-action" onClick={onContinue}>
+              Открыть редактор
+            </button>
           </>
         ) : null}
 
@@ -71,6 +80,7 @@ export function InstallScreen() {
             <button className="primary-action" onClick={() => setAttempt((value) => value + 1)}>
               Повторить
             </button>
+            <button onClick={onContinue}>Открыть редактор без встраивания</button>
           </>
         ) : null}
 

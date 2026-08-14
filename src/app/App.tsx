@@ -12,7 +12,7 @@ import { Toolbar } from "../features/plan-editor/components/Toolbar";
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
 import { defaultStandSizeM, getFloorPlan, getFloorPlanKind, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
 import { standTemplates } from "../shared/domain/standTemplates";
-import { installPlacement } from "../shared/crm/bitrixApi";
+import { dealTabPlacement } from "../shared/crm/bitrixApi";
 import { bitrixCrmProvider } from "../shared/crm/bitrixCrmProvider";
 import type { EditorScreen } from "../shared/domain/types";
 import { localPlanRepository } from "../shared/storage/localPlanRepository";
@@ -20,6 +20,7 @@ import { localPlanRepository } from "../shared/storage/localPlanRepository";
 export function App() {
   const [startupError, setStartupError] = useState<string | null>(null);
   const [showSpecification, setShowSpecification] = useState(false);
+  const [skipInstall, setSkipInstall] = useState(false);
   const backgroundUploadRef = useRef<HTMLInputElement | null>(null);
   const mode = useEditorStore((state) => state.mode);
   const tool = useEditorStore((state) => state.tool);
@@ -116,9 +117,10 @@ export function App() {
     event.target.value = "";
   };
 
-  // Портал открыл страницу установки: редактор здесь не нужен, нужно встроиться.
-  if (crm.placement === installPlacement) {
-    return <InstallScreen />;
+  // Приложение открыто в портале, но не во вкладке сделки — значит из списка
+  // интеграций или при установке. Сначала встраивание, редактор по кнопке.
+  if (crm.provider === "bitrix24" && crm.placement !== dealTabPlacement && !skipInstall) {
+    return <InstallScreen onContinue={() => setSkipInstall(true)} />;
   }
 
   return (
