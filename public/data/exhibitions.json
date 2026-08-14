@@ -16,12 +16,7 @@
       "title": "Павильон 1",
       "width": 2161,
       "height": 1614,
-      "background": {
-        "name": "cbsss2024.jpg",
-        "imageUrl": "/web_app1/img/cbsss2024.jpg",
-        "width": 2161,
-        "height": 1614
-      },
+      "background": null,
       "grid": {
         "enabled": true,
         "snap": true,
