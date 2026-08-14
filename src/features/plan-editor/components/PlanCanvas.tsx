@@ -6,7 +6,7 @@ import { getCanvasObject, getFloorPlan, getFloorPlanLayers, getFloorPlanObjects,
 import { currentDealColor, statusColors } from "../../../shared/domain/status";
 import type { CanvasObject, Point } from "../../../shared/domain/types";
 import { flattenPoints, polygonArea, polygonCentroid, snapPoint } from "../../../shared/geometry/polygon";
-import { useEditorStore } from "../store/editorStore";
+import { maxScale, minScale, useEditorStore } from "../store/editorStore";
 import { useImage } from "../hooks/useImage";
 import { registerStage } from "../stageRegistry";
 
@@ -18,8 +18,10 @@ const middleMouseButton = 1;
 export function PlanCanvas() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
-  const [stageSize, setStageSize] = useState({ width: 1100, height: 760 });
   const [middleButtonPanning, setMiddleButtonPanning] = useState(false);
+  // Размер холста живёт в store: по нему считается вписывание плана в экран.
+  const stageSize = useEditorStore((state) => state.stageSize);
+  const setStageSize = useEditorStore((state) => state.setStageSize);
   const project = useEditorStore((state) => state.project);
   const activeFloorPlanId = useEditorStore((state) => state.activeFloorPlanId);
   const selectedObjectId = useEditorStore((state) => state.selectedObjectId);
@@ -52,7 +54,7 @@ export function PlanCanvas() {
 
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [setStageSize]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -146,7 +148,7 @@ export function PlanCanvas() {
     if (!pointer) return;
 
     const zoomIntensity = 0.0015;
-    const nextScale = Math.min(Math.max(viewport.scale * Math.exp(-event.evt.deltaY * zoomIntensity), 0.15), 3);
+    const nextScale = Math.min(Math.max(viewport.scale * Math.exp(-event.evt.deltaY * zoomIntensity), minScale), maxScale);
     const planPointUnderCursor = {
       x: (pointer.x - viewport.x) / viewport.scale,
       y: (pointer.y - viewport.y) / viewport.scale,

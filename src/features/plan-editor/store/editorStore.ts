@@ -36,6 +36,22 @@ type Viewport = {
   y: number;
 };
 
+/** Размер видимой области холста на экране. Без него план не во что вписывать. */
+type StageSize = {
+  width: number;
+  height: number;
+};
+
+/**
+ * Пределы масштаба. Нижний специально мелкий: план павильона бывает
+ * в несколько тысяч пикселей, а холст зажат между панелями.
+ */
+export const minScale = 0.05;
+export const maxScale = 3;
+
+/** Поля вокруг плана, когда он вписан в холст. */
+const fitPadding = 24;
+
 type EditorState = {
   project: ExhibitionProject | null;
   activeFloorPlanId: string | null;
@@ -46,6 +62,7 @@ type EditorState = {
   mode: AppMode;
   tool: EditorTool;
   viewport: Viewport;
+  stageSize: StageSize;
   crm: CrmContext;
   validationMessage: string | null;
   isDirty: boolean;
@@ -82,12 +99,14 @@ type EditorState = {
   zoomOut: () => void;
   fitToScreen: () => void;
   setViewport: (viewport: Partial<Viewport>) => void;
+  setStageSize: (size: StageSize) => void;
   undo: () => void;
   redo: () => void;
 };
 
 const defaultCrm: CrmContext = { provider: "mock", dealId: null, userId: null };
 const defaultViewport: Viewport = { scale: 0.45, x: 24, y: 24 };
+const defaultStageSize: StageSize = { width: 1100, height: 760 };
 
 export const useEditorStore = create<EditorState>((set, get) => ({
   project: null,
@@ -98,6 +117,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   mode: "admin",
   tool: "select",
   viewport: defaultViewport,
+  stageSize: defaultStageSize,
   crm: defaultCrm,
   validationMessage: null,
   isDirty: false,
@@ -436,10 +456,33 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     commitProject(set, get, { ...project, objects: [...kept, ...walls] });
     set({ selectedObjectId: null, validationMessage: null });
   },
-  zoomIn: () => set(({ viewport }) => ({ viewport: { ...viewport, scale: Math.min(viewport.scale + 0.1, 3) } })),
-  zoomOut: () => set(({ viewport }) => ({ viewport: { ...viewport, scale: Math.max(viewport.scale - 0.1, 0.15) } })),
-  fitToScreen: () => set({ viewport: defaultViewport }),
+  zoomIn: () => set(({ viewport }) => ({ viewport: { ...viewport, scale: Math.min(viewport.scale + 0.1, maxScale) } })),
+  zoomOut: () => set(({ viewport }) => ({ viewport: { ...viewport, scale: Math.max(viewport.scale - 0.1, minScale) } })),
+  /** Вписывает план целиком в холст и ставит по центру. */
+  fitToScreen: () => {
+    const { project, activeFloorPlanId, stageSize } = get();
+    const plan = getFloorPlan(project, activeFloorPlanId);
+    if (!plan || plan.width <= 0 || plan.height <= 0 || stageSize.width <= 0 || stageSize.height <= 0) {
+      set({ viewport: defaultViewport });
+      return;
+    }
+
+    const available = {
+      width: Math.max(stageSize.width - fitPadding * 2, 1),
+      height: Math.max(stageSize.height - fitPadding * 2, 1),
+    };
+    const scale = Math.min(Math.max(Math.min(available.width / plan.width, available.height / plan.height), minScale), maxScale);
+
+    set({
+      viewport: {
+        scale,
+        x: (stageSize.width - plan.width * scale) / 2,
+        y: (stageSize.height - plan.height * scale) / 2,
+      },
+    });
+  },
   setViewport: (viewport) => set((state) => ({ viewport: { ...state.viewport, ...viewport } })),
+  setStageSize: (size) => set({ stageSize: size }),
   undo: () => {
     const { historyPast, historyFuture, project } = get();
     if (!project || historyPast.length === 0) return;

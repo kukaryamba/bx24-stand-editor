@@ -108,6 +108,8 @@ export function App() {
       },
       size,
     );
+    // План только что сменил размер — показываем его целиком, иначе он уезжает за край.
+    fitToScreen();
     event.target.value = "";
   };
 
