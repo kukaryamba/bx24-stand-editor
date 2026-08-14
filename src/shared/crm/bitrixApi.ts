@@ -49,7 +49,8 @@ export function isBitrixEnvironment(): boolean {
   if (window.BX24) return true;
 
   const params = new URLSearchParams(window.location.search);
-  const hasPortalParams = params.has("DOMAIN") || params.has("AUTH_ID") || params.has("PROTOCOL");
+  // APP_SID портал подставляет всегда, остальные — не в каждом встраивании.
+  const hasPortalParams = ["DOMAIN", "AUTH_ID", "PROTOCOL", "APP_SID", "member_id"].some((name) => params.has(name));
   const inIframe = window.self !== window.top;
 
   return inIframe && hasPortalParams;
