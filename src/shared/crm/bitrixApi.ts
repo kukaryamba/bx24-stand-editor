@@ -158,36 +158,59 @@ export function appHandlerUrl(): string {
   return `${window.location.origin}${window.location.pathname}`;
 }
 
-/** Какие места уже привязаны. Пустой список — приложение ещё не встроено. */
-export async function listBoundPlacements(): Promise<string[]> {
+export type BoundPlacement = {
+  placement: string;
+  handler: string;
+};
+
+/** Какие места уже привязаны и на какие адреса. */
+export async function listBoundPlacements(): Promise<BoundPlacement[]> {
   const bound = await callMethod<unknown>("placement.get");
   if (!Array.isArray(bound)) return [];
 
   return bound
     .map((item) => {
-      if (typeof item === "string") return item;
-      if (item && typeof item === "object" && "placement" in item) return String((item as { placement: unknown }).placement);
-      if (item && typeof item === "object" && "PLACEMENT" in item) return String((item as { PLACEMENT: unknown }).PLACEMENT);
-      return "";
+      if (!item || typeof item !== "object") return null;
+
+      const record = item as Record<string, unknown>;
+      const placement = record.placement ?? record.PLACEMENT;
+      const handler = record.handler ?? record.HANDLER;
+      if (!placement) return null;
+
+      return { placement: String(placement), handler: handler ? String(handler) : "" };
     })
-    .filter(Boolean);
+    .filter((item): item is BoundPlacement => item !== null);
 }
 
 /**
  * Встраивает приложение вкладкой в карточку сделки.
- * Повторная привязка порталом не разрешена, поэтому сначала смотрим список.
+ *
+ * Портал раздаёт статичное приложение из папки, имя которой меняется при
+ * каждой загрузке архива. Поэтому старая привязка после обновления ведёт на
+ * исчезнувший адрес и вкладка отдаёт 404 — такую привязку снимаем и делаем
+ * новую. Повторно привязать тот же адрес портал не даёт.
  */
-export async function bindDealTab(title: string): Promise<"bound" | "already"> {
+export async function bindDealTab(title: string): Promise<"bound" | "rebound" | "already"> {
+  const url = appHandlerUrl();
   const bound = await listBoundPlacements();
-  if (bound.includes(dealTabPlacement)) return "already";
+  const dealTabs = bound.filter((item) => item.placement === dealTabPlacement);
+
+  if (dealTabs.some((item) => item.handler === url)) return "already";
+
+  for (const stale of dealTabs) {
+    await callMethod("placement.unbind", {
+      PLACEMENT: dealTabPlacement,
+      HANDLER: stale.handler,
+    });
+  }
 
   await callMethod("placement.bind", {
     PLACEMENT: dealTabPlacement,
-    HANDLER: appHandlerUrl(),
+    HANDLER: url,
     TITLE: title,
   });
 
-  return "bound";
+  return dealTabs.length > 0 ? "rebound" : "bound";
 }
 
 export function finishInstall(): void {

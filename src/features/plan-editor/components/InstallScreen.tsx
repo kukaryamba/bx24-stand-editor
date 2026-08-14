@@ -14,8 +14,14 @@ import { getAllowedCategory, listDealCategories, setAllowedCategory, type DealCa
 
 type InstallState =
   | { kind: "working" }
-  | { kind: "done"; alreadyBound: boolean }
+  | { kind: "done"; result: "bound" | "rebound" | "already" }
   | { kind: "error"; text: string };
+
+const installMessage: Record<"bound" | "rebound" | "already", string> = {
+  bound: "Готово: приложение встроено в карточку сделки.",
+  rebound: "Готово: вкладка переключена на новую версию приложения.",
+  already: "Приложение уже встроено в карточку сделки.",
+};
 
 type InstallScreenProps = {
   /** Открыть редактор, не выходя из портала. */
@@ -37,7 +43,7 @@ export function InstallScreen({ onContinue }: InstallScreenProps) {
         if (cancelled) return;
 
         finishInstall();
-        setState({ kind: "done", alreadyBound: result === "already" });
+        setState({ kind: "done", result });
       } catch (error) {
         if (cancelled) return;
         setState({ kind: "error", text: error instanceof Error ? error.message : "Не удалось встроить приложение." });
@@ -59,11 +65,7 @@ export function InstallScreen({ onContinue }: InstallScreenProps) {
 
         {state.kind === "done" ? (
           <>
-            <p className="install-card__ok">
-              {state.alreadyBound
-                ? "Приложение уже встроено в карточку сделки."
-                : "Готово: приложение встроено в карточку сделки."}
-            </p>
+            <p className="install-card__ok">{installMessage[state.result]}</p>
             <p>Откройте любую сделку — там появится вкладка «План стенда».</p>
             <button className="primary-action" onClick={onContinue}>
               Открыть редактор
