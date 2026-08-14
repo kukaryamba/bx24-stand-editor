@@ -7,7 +7,7 @@ export const bitrixCrmProvider: CrmProvider = {
   init: async (): Promise<CrmContext> => {
     if (!isBitrixEnvironment()) {
       // Локальный режим: сделку можно подставить вручную через ?dealId=123
-      return { provider: "mock", dealId: getQueryParam("dealId"), userId: null };
+      return { provider: "mock", dealId: getQueryParam("dealId"), userId: null, placement: null };
     }
 
     await bitrixInit();
@@ -19,6 +19,7 @@ export const bitrixCrmProvider: CrmProvider = {
       provider: "bitrix24",
       dealId: rawDealId ? String(rawDealId) : null,
       userId: null,
+      placement: placement?.placement ?? null,
     };
   },
 

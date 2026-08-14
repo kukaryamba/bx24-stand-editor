@@ -17,6 +17,8 @@ type Bx24 = {
     info(): { placement?: string; options?: Record<string, unknown> };
   };
   callMethod(method: string, params: Record<string, unknown>, callback: (result: Bx24CallResult<unknown>) => void): void;
+  /** Сообщает порталу, что установка завершена. Без этого приложение остаётся неустановленным. */
+  installFinish?(): void;
 };
 
 declare global {
@@ -140,6 +142,56 @@ export async function createStandPlanField(): Promise<string> {
   const created = await findStandPlanField();
   if (!created) throw new Error("Поле создано, но не найдено в списке. Проверьте права администратора.");
   return created;
+}
+
+/** Место в карточке сделки, куда встраивается приложение. */
+export const dealTabPlacement = "CRM_DEAL_DETAIL_TAB";
+
+/** Значение placement на странице установки приложения. */
+export const installPlacement = "DEFAULT";
+
+/**
+ * Адрес самого приложения — его портал будет открывать во вкладке сделки.
+ * Берётся из адресной строки без параметров: их портал подставит свои.
+ */
+export function appHandlerUrl(): string {
+  return `${window.location.origin}${window.location.pathname}`;
+}
+
+/** Какие места уже привязаны. Пустой список — приложение ещё не встроено. */
+export async function listBoundPlacements(): Promise<string[]> {
+  const bound = await callMethod<unknown>("placement.get");
+  if (!Array.isArray(bound)) return [];
+
+  return bound
+    .map((item) => {
+      if (typeof item === "string") return item;
+      if (item && typeof item === "object" && "placement" in item) return String((item as { placement: unknown }).placement);
+      if (item && typeof item === "object" && "PLACEMENT" in item) return String((item as { PLACEMENT: unknown }).PLACEMENT);
+      return "";
+    })
+    .filter(Boolean);
+}
+
+/**
+ * Встраивает приложение вкладкой в карточку сделки.
+ * Повторная привязка порталом не разрешена, поэтому сначала смотрим список.
+ */
+export async function bindDealTab(title: string): Promise<"bound" | "already"> {
+  const bound = await listBoundPlacements();
+  if (bound.includes(dealTabPlacement)) return "already";
+
+  await callMethod("placement.bind", {
+    PLACEMENT: dealTabPlacement,
+    HANDLER: appHandlerUrl(),
+    TITLE: title,
+  });
+
+  return "bound";
+}
+
+export function finishInstall(): void {
+  window.BX24?.installFinish?.();
 }
 
 function describeError(error: unknown, method: string): string {

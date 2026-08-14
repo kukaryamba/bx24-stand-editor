@@ -186,4 +186,9 @@ export type CrmContext = {
   provider: "bitrix24" | "mock";
   dealId: string | null;
   userId: string | null;
+  /**
+   * Где портал открыл приложение. DEFAULT — страница установки, в ней
+   * приложение регистрирует своё место в карточке сделки.
+   */
+  placement: string | null;
 };

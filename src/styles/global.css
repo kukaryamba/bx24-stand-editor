@@ -577,6 +577,63 @@ p {
   line-height: 1.4;
 }
 
+.install-screen {
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+  padding: 32px;
+  background: #f9fafb;
+}
+
+.install-card {
+  max-width: 560px;
+  padding: 28px;
+  border: 1px solid #d9dee7;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1f2937;
+}
+
+.install-card h1 {
+  margin: 0 0 14px;
+  font-size: 20px;
+}
+
+.install-card p {
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.install-card__ok {
+  font-weight: 600;
+  color: #14803c;
+}
+
+.install-card__error {
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #fdecec;
+  color: #b3261e;
+}
+
+.install-card__facts {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid #e5e8ee;
+  font-size: 13px;
+}
+
+.install-card__facts dt {
+  color: #6b7280;
+}
+
+.install-card__facts dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
 .canvas-host {
   min-width: 0;
   min-height: 0;

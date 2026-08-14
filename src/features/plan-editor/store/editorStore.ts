@@ -104,7 +104,7 @@ type EditorState = {
   redo: () => void;
 };
 
-const defaultCrm: CrmContext = { provider: "mock", dealId: null, userId: null };
+const defaultCrm: CrmContext = { provider: "mock", dealId: null, userId: null, placement: null };
 const defaultViewport: Viewport = { scale: 0.45, x: 24, y: 24 };
 const defaultStageSize: StageSize = { width: 1100, height: 760 };
 

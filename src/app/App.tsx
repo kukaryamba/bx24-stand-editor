@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, FileText, Grid2x2, Hand, ImageUp, MousePointer2, PenTool, Redo2, Save, Undo2, ZoomIn, ZoomOut } from "lucide-react";
 import { DealSyncPanel } from "../features/plan-editor/components/DealSyncPanel";
 import { FurniturePalette } from "../features/plan-editor/components/FurniturePalette";
+import { InstallScreen } from "../features/plan-editor/components/InstallScreen";
 import { PlanCanvas } from "../features/plan-editor/components/PlanCanvas";
 import { PropertiesPanel } from "../features/plan-editor/components/PropertiesPanel";
 import { SpecificationDialog } from "../features/plan-editor/components/SpecificationDialog";
@@ -11,6 +12,7 @@ import { Toolbar } from "../features/plan-editor/components/Toolbar";
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
 import { defaultStandSizeM, getFloorPlan, getFloorPlanKind, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
 import { standTemplates } from "../shared/domain/standTemplates";
+import { installPlacement } from "../shared/crm/bitrixApi";
 import { bitrixCrmProvider } from "../shared/crm/bitrixCrmProvider";
 import type { EditorScreen } from "../shared/domain/types";
 import { localPlanRepository } from "../shared/storage/localPlanRepository";
@@ -37,6 +39,7 @@ export function App() {
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
   const project = useEditorStore((state) => state.project);
+  const crm = useEditorStore((state) => state.crm);
   const activeFloorPlanId = useEditorStore((state) => state.activeFloorPlanId);
   const isDirty = useEditorStore((state) => state.isDirty);
   const historyPastLength = useEditorStore((state) => state.historyPast.length);
@@ -112,6 +115,11 @@ export function App() {
     fitToScreen();
     event.target.value = "";
   };
+
+  // Портал открыл страницу установки: редактор здесь не нужен, нужно встроиться.
+  if (crm.placement === installPlacement) {
+    return <InstallScreen />;
+  }
 
   return (
     <div className="app-shell">
