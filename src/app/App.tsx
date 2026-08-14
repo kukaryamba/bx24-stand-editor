@@ -9,6 +9,7 @@ import { SpecificationDialog } from "../features/plan-editor/components/Specific
 import { StandNavigator } from "../features/plan-editor/components/StandNavigator";
 import { exportPlanToPng } from "../features/plan-editor/exportPlanImage";
 import { Toolbar } from "../features/plan-editor/components/Toolbar";
+import { useCategoryAccess } from "../features/plan-editor/hooks/useCategoryAccess";
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
 import { defaultStandSizeM, getFloorPlan, getFloorPlanKind, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
 import { standTemplates } from "../shared/domain/standTemplates";
@@ -45,6 +46,7 @@ export function App() {
   const isDirty = useEditorStore((state) => state.isDirty);
   const historyPastLength = useEditorStore((state) => state.historyPast.length);
   const historyFutureLength = useEditorStore((state) => state.historyFuture.length);
+  const categoryAccess = useCategoryAccess(crm.provider === "bitrix24" && crm.placement === dealTabPlacement, crm.dealId);
   const activePlan = useMemo(() => getFloorPlan(project, activeFloorPlanId), [activeFloorPlanId, project]);
   const planLayers = useMemo(() => getFloorPlanLayers(project, activeFloorPlanId), [activeFloorPlanId, project]);
   // Экран не хранится отдельно: он определяется тем, какой план открыт.
@@ -121,6 +123,25 @@ export function App() {
   // интеграций или при установке. Сначала встраивание, редактор по кнопке.
   if (crm.provider === "bitrix24" && crm.placement !== dealTabPlacement && !skipInstall) {
     return <InstallScreen onContinue={() => setSkipInstall(true)} />;
+  }
+
+  if (categoryAccess.kind === "checking") {
+    return <div className="empty-state">Проверяю воронку сделки...</div>;
+  }
+
+  if (categoryAccess.kind === "blocked") {
+    return (
+      <div className="install-screen">
+        <div className="install-card">
+          <h1>Стенды ведутся в другой воронке</h1>
+          <p>
+            Эта сделка не из воронки «{categoryAccess.allowedName}», а планы стендов ведутся только в ней. Вкладка
+            появляется во всех сделках: Битрикс24 не умеет показывать встроенное приложение выборочно.
+          </p>
+          <p>Если сделка должна вести стенд, перенесите её в нужную воронку.</p>
+        </div>
+      </div>
+    );
   }
 
   return (

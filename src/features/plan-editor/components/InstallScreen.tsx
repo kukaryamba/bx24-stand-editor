@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { appHandlerUrl, bindDealTab, finishInstall } from "../../../shared/crm/bitrixApi";
+import { getAllowedCategory, listDealCategories, setAllowedCategory, type DealCategory } from "../../../shared/crm/dealCategory";
 
 /**
  * Установка приложения в портал.
@@ -84,6 +85,8 @@ export function InstallScreen({ onContinue }: InstallScreenProps) {
           </>
         ) : null}
 
+        {state.kind === "done" ? <CategoryPicker /> : null}
+
         <dl className="install-card__facts">
           <div>
             <dt>Адрес приложения</dt>
@@ -95,6 +98,88 @@ export function InstallScreen({ onContinue }: InstallScreenProps) {
           </div>
         </dl>
       </div>
+    </div>
+  );
+}
+
+type PickerState =
+  | { kind: "loading" }
+  | { kind: "ready"; categories: DealCategory[]; selectedId: string; saved: boolean }
+  | { kind: "error"; text: string };
+
+/**
+ * Выбор воронки, в которой приложение работает.
+ *
+ * Вкладку Битрикс24 показывает во всех сделках — ограничить встраивание
+ * воронкой нельзя. Поэтому в остальных воронках приложение показывает
+ * заглушку, а выбранная воронка хранится в настройках приложения на портале.
+ */
+function CategoryPicker() {
+  const [state, setState] = useState<PickerState>({ kind: "loading" });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const [categories, allowed] = await Promise.all([listDealCategories(), getAllowedCategory()]);
+        if (cancelled) return;
+        setState({ kind: "ready", categories, selectedId: allowed?.id ?? "", saved: false });
+      } catch (error) {
+        if (cancelled) return;
+        setState({ kind: "error", text: error instanceof Error ? error.message : "Не удалось получить список воронок." });
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const save = async (categoryId: string) => {
+    if (state.kind !== "ready") return;
+
+    const category = state.categories.find((item) => item.id === categoryId) ?? null;
+    setState({ ...state, selectedId: categoryId, saved: false });
+
+    try {
+      await setAllowedCategory(category);
+      setState((current) => (current.kind === "ready" ? { ...current, saved: true } : current));
+    } catch (error) {
+      setState({ kind: "error", text: error instanceof Error ? error.message : "Не удалось сохранить выбор воронки." });
+    }
+  };
+
+  return (
+    <div className="install-card__section">
+      <h2>Воронка</h2>
+
+      {state.kind === "loading" ? <p>Загружаю список воронок...</p> : null}
+      {state.kind === "error" ? <p className="install-card__error">{state.text}</p> : null}
+
+      {state.kind === "ready" ? (
+        <>
+          <label>
+            Приложение работает в воронке
+            <select value={state.selectedId} onChange={(event) => void save(event.target.value)}>
+              <option value="">Во всех воронках</option>
+              {state.categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <p>
+            Вкладка появится во всех сделках — Битрикс24 не умеет показывать её выборочно. Но в сделках других воронок
+            она сообщит, что стенды ведутся не здесь.
+          </p>
+
+          {state.saved ? <p className="install-card__ok">Сохранено.</p> : null}
+        </>
+      ) : null}
     </div>
   );
 }
