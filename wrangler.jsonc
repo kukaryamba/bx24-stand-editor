@@ -1,0 +1,15 @@
+{
+  // Настройка Worker'а, из которого раздаётся приложение.
+  // Имя должно совпадать с уже созданным в панели Cloudflare проектом.
+  "name": "bx24-stand-editor",
+  "compatibility_date": "2026-08-01",
+  "main": "worker/index.js",
+  "assets": {
+    // Сюда Vite кладёт сборку.
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // Иначе раздача статики ответила бы на POST ошибкой 405,
+    // не дав нашему коду ничего исправить.
+    "run_worker_first": true
+  }
+}
