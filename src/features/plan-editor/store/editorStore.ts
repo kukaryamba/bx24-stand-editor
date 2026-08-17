@@ -69,6 +69,7 @@ type EditorState = {
   historyPast: ExhibitionProject[];
   historyFuture: ExhibitionProject[];
   loadProject: (project: ExhibitionProject) => void;
+  replacePlanObjects: (floorPlanId: string | null, objects: CanvasObject[]) => void;
   createSnapshot: () => ExhibitionProject;
   saveWorkspace: () => void;
   setCrmContext: (crm: CrmContext) => void;
@@ -125,6 +126,23 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   historyFuture: [] as ExhibitionProject[],
 
   loadProject: (project) => set({ project, activeFloorPlanId: project.floorPlans[0]?.id ?? null, historyPast: [], historyFuture: [], isDirty: false }),
+  /**
+   * Заменяет предметы одного плана — например, загруженные из сделки.
+   *
+   * Отдельно от loadProject: та переключает редактор на первый план проекта,
+   * то есть на общий план выставки, и загрузка в открытый стенд выбрасывала
+   * пользователя на другой экран.
+   */
+  replacePlanObjects: (floorPlanId, objects) => {
+    const project = get().project;
+    if (!project) return;
+
+    const untouched = project.objects.filter((object) => object.kind !== "equipment" || object.floorPlanId !== floorPlanId);
+    const restored = objects.map((object) => ({ ...object, floorPlanId: floorPlanId ?? object.floorPlanId }));
+
+    commitProject(set, get, { ...project, objects: [...untouched, ...restored] });
+    set({ selectedObjectId: null, draftPoints: [], validationMessage: null });
+  },
   createSnapshot: () => {
     const project = get().project;
     if (!project) throw new Error("Нет данных для сохранения.");

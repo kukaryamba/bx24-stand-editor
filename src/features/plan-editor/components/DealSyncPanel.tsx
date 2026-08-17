@@ -22,7 +22,7 @@ export function DealSyncPanel() {
   const activeFloorPlanId = useEditorStore((s) => s.activeFloorPlanId);
   const activeStandObjectId = useEditorStore((s) => s.activeStandObjectId);
   const crm = useEditorStore((s) => s.crm);
-  const loadProject = useEditorStore((s) => s.loadProject);
+  const replacePlanObjects = useEditorStore((s) => s.replacePlanObjects);
 
   // План сохраняется в сделку своего стенда. Сделка портала берётся запасным
   // вариантом: приложение может быть открыто из карточки, где стенд ещё не привязан.
@@ -62,12 +62,8 @@ export function DealSyncPanel() {
       }
 
       // Заменяем предметы только этого стенда: планы соседних стендов и карта
-      // выставки остаются нетронутыми.
-      const untouched = project.objects.filter(
-        (object) => object.kind !== "equipment" || object.floorPlanId !== activeFloorPlanId,
-      );
-      const restored = payload.objects.map((object) => ({ ...object, floorPlanId: activeFloorPlanId ?? object.floorPlanId }));
-      loadProject({ ...project, objects: [...untouched, ...restored] });
+      // выставки остаются нетронутыми, открытый план не меняется.
+      replacePlanObjects(activeFloorPlanId, payload.objects);
       setState({ kind: "done", text: `Загружено предметов: ${payload.objects.length}` });
     } catch (error) {
       setState({ kind: "error", text: error instanceof Error ? error.message : "Не удалось загрузить план." });
