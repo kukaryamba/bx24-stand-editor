@@ -376,7 +376,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (kind === "expo") {
       const expoPlan = findFloorPlanByKind(project, "expo");
       if (expoPlan) {
-        set({ activeFloorPlanId: expoPlan.id, selectedObjectId: null, draftPoints: [], validationMessage: null });
+        set({
+          activeFloorPlanId: expoPlan.id,
+          selectedObjectId: null,
+          draftPoints: [],
+          validationMessage: null,
+          viewport: fitViewport(project, expoPlan.id, state.stageSize),
+        });
       }
       return;
     }
@@ -405,6 +411,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         selectedObjectId: null,
         draftPoints: [],
         validationMessage: null,
+        viewport: fitViewport(project, existing.id, get().stageSize),
       });
       return;
     }
@@ -439,6 +446,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       selectedObjectId: null,
       draftPoints: [],
       validationMessage: null,
+      viewport: fitViewport(get().project, plan.id, get().stageSize),
     });
   },
   backToExpoPlan: () => {
@@ -446,7 +454,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const expoPlan = findFloorPlanByKind(project, "expo");
     if (!expoPlan) return;
 
-    set({ activeFloorPlanId: expoPlan.id, selectedObjectId: null, draftPoints: [], validationMessage: null });
+    set({
+      activeFloorPlanId: expoPlan.id,
+      selectedObjectId: null,
+      draftPoints: [],
+      validationMessage: null,
+      viewport: fitViewport(project, expoPlan.id, get().stageSize),
+    });
   },
   resizeStandPlan: (widthM, depthM) => {
     const state = get();
@@ -502,25 +516,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   /** Вписывает план целиком в холст и ставит по центру. */
   fitToScreen: () => {
     const { project, activeFloorPlanId, stageSize } = get();
-    const plan = getFloorPlan(project, activeFloorPlanId);
-    if (!plan || plan.width <= 0 || plan.height <= 0 || stageSize.width <= 0 || stageSize.height <= 0) {
-      set({ viewport: defaultViewport });
-      return;
-    }
-
-    const available = {
-      width: Math.max(stageSize.width - fitPadding * 2, 1),
-      height: Math.max(stageSize.height - fitPadding * 2, 1),
-    };
-    const scale = Math.min(Math.max(Math.min(available.width / plan.width, available.height / plan.height), minScale), maxScale);
-
-    set({
-      viewport: {
-        scale,
-        x: (stageSize.width - plan.width * scale) / 2,
-        y: (stageSize.height - plan.height * scale) / 2,
-      },
-    });
+    set({ viewport: fitViewport(project, activeFloorPlanId, stageSize) });
   },
   setViewport: (viewport) => set((state) => ({ viewport: { ...state.viewport, ...viewport } })),
   setStageSize: (size) => set({ stageSize: size }),
@@ -561,6 +557,32 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 export const standStatuses: StandStatus[] = ["available", "reserved", "sold", "construction", "unavailable"];
 
 type EditorStateSetter = (partial: Partial<EditorState> | ((state: EditorState) => Partial<EditorState>)) => void;
+
+/**
+ * Масштаб и сдвиг, при которых план целиком помещается в холст.
+ *
+ * Нужен не только кнопке «Fit»: карта выставки и площадка стенда отличаются
+ * по размеру в десятки раз, и при переходе между ними чужой масштаб уводит
+ * план за край экрана.
+ */
+function fitViewport(project: ExhibitionProject | null, floorPlanId: string | null, stageSize: StageSize): Viewport {
+  const plan = getFloorPlan(project, floorPlanId);
+  if (!plan || plan.width <= 0 || plan.height <= 0 || stageSize.width <= 0 || stageSize.height <= 0) {
+    return defaultViewport;
+  }
+
+  const available = {
+    width: Math.max(stageSize.width - fitPadding * 2, 1),
+    height: Math.max(stageSize.height - fitPadding * 2, 1),
+  };
+  const scale = Math.min(Math.max(Math.min(available.width / plan.width, available.height / plan.height), minScale), maxScale);
+
+  return {
+    scale,
+    x: (stageSize.width - plan.width * scale) / 2,
+    y: (stageSize.height - plan.height * scale) / 2,
+  };
+}
 
 function commitProject(setState: EditorStateSetter, getState: () => EditorState, project: ExhibitionProject): void {
   const current = getState().project;
