@@ -14,6 +14,10 @@
 export type GridDetection = {
   /** Шаг сетки в пикселях исходной картинки. */
   cellSizePx: number;
+  /** Где проходит первая линия по горизонтали, от левого края картинки. */
+  offsetX: number;
+  /** То же по вертикали, от верхнего края. */
+  offsetY: number;
   /** Насколько уверенно нашлась периодичность, от 0 до 1. */
   confidence: number;
 };
@@ -72,10 +76,36 @@ export function detectGridStep(image: HTMLImageElement): GridDetection | null {
   const best = pickBest(byColumns, byRows);
   if (!best) return null;
 
+  // Шага мало: если начало сетки не совпадает с краем картинки, линии
+  // приложения пройдут между линиями чертежа. Поэтому ищем ещё и фазу.
   return {
     cellSizePx: round2(best.period / scale),
+    offsetX: round2(phaseOf(columns, best.period) / scale),
+    offsetY: round2(phaseOf(rows, best.period) / scale),
     confidence: round2(best.confidence),
   };
+}
+
+/**
+ * Где проходит ближайшая к краю линия сетки.
+ *
+ * Остатки от деления координат линий на шаг усредняются по кругу: обычное
+ * среднее врёт, когда линии стоят около нуля и около целого шага сразу.
+ */
+function phaseOf(profile: Float64Array, period: number): number {
+  const peaks = findPeaks(profile, period);
+  if (peaks.length < 3) return 0;
+
+  let sin = 0;
+  let cos = 0;
+  for (const peak of peaks) {
+    const angle = (2 * Math.PI * peak) / period;
+    sin += Math.sin(angle);
+    cos += Math.cos(angle);
+  }
+
+  const mean = (Math.atan2(sin, cos) / (2 * Math.PI)) * period;
+  return ((mean % period) + period) % period;
 }
 
 type Period = {

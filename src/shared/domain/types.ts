@@ -93,6 +93,13 @@ export type GridSettings = {
   snap: boolean;
   cellSizePx: number;
   metersPerCell: number;
+  /**
+   * Где начинается сетка, в пикселях от края плана. Нужен, когда сетка
+   * чертежа на подложке не начинается ровно с угла картинки.
+   * Необязательный: планы, сохранённые до его появления, считаются с нуля.
+   */
+  offsetX?: number;
+  offsetY?: number;
 };
 
 /**

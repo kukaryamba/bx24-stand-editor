@@ -3,10 +3,10 @@ import type { CanvasObject, FloorPlan, Point } from "../domain/types";
 
 const epsilon = 0.00001;
 
-export function snapPoint(point: Point, gridSize: number): Point {
+export function snapPoint(point: Point, gridSize: number, offset: Point = { x: 0, y: 0 }): Point {
   return {
-    x: Math.round(point.x / gridSize) * gridSize,
-    y: Math.round(point.y / gridSize) * gridSize,
+    x: Math.round((point.x - offset.x) / gridSize) * gridSize + offset.x,
+    y: Math.round((point.y - offset.y) / gridSize) * gridSize + offset.y,
   };
 }
 

@@ -114,13 +114,14 @@ export function PlanCanvas() {
   const visibleObjects = objects.filter((object) => visibleLayerIds.has(object.layerId));
   const standObjects = visibleObjects.filter((object) => object.kind === "stand");
   const furnitureObjects = visibleObjects.filter((object) => object.kind === "equipment");
-  const gridLines = floorPlan.grid.enabled ? createGridLines(floorPlan.width, floorPlan.height, floorPlan.grid.cellSizePx) : [];
+  const gridOffset: Point = { x: floorPlan.grid.offsetX ?? 0, y: floorPlan.grid.offsetY ?? 0 };
+  const gridLines = floorPlan.grid.enabled ? createGridLines(floorPlan.width, floorPlan.height, floorPlan.grid.cellSizePx, gridOffset) : [];
 
   const getPointer = (stage: Konva.Stage): Point | null => {
     const pointer = stage.getPointerPosition();
     if (!pointer) return null;
     const rawPoint = { x: (pointer.x - viewport.x) / viewport.scale, y: (pointer.y - viewport.y) / viewport.scale };
-    return floorPlan.grid.snap ? snapPoint(rawPoint, floorPlan.grid.cellSizePx) : rawPoint;
+    return floorPlan.grid.snap ? snapPoint(rawPoint, floorPlan.grid.cellSizePx, gridOffset) : rawPoint;
   };
 
   const handleStageClick = (event: Konva.KonvaEventObject<MouseEvent>) => {
@@ -163,7 +164,7 @@ export function PlanCanvas() {
 
   const handleObjectDragEnd = (object: CanvasObject, event: Konva.KonvaEventObject<DragEvent>) => {
     const delta = floorPlan.grid.snap
-      ? snapPoint({ x: event.target.x(), y: event.target.y() }, floorPlan.grid.cellSizePx)
+      ? snapPoint({ x: event.target.x(), y: event.target.y() }, floorPlan.grid.cellSizePx, gridOffset)
       : { x: event.target.x(), y: event.target.y() };
     event.target.position({ x: 0, y: 0 });
     updateStand(object.id, {
@@ -173,7 +174,7 @@ export function PlanCanvas() {
 
   const handleFurnitureDragEnd = (object: CanvasObject, event: Konva.KonvaEventObject<DragEvent>) => {
     const raw = { x: event.target.x(), y: event.target.y() };
-    const origin = floorPlan.grid.snap ? snapPoint(raw, floorPlan.grid.cellSizePx) : raw;
+    const origin = floorPlan.grid.snap ? snapPoint(raw, floorPlan.grid.cellSizePx, gridOffset) : raw;
     event.target.position(origin);
     moveFurniture(object.id, origin);
   };
@@ -205,7 +206,7 @@ export function PlanCanvas() {
 
   const handleVertexDragEnd = (object: CanvasObject, pointIndex: number, event: Konva.KonvaEventObject<DragEvent>) => {
     const nextPoint = floorPlan.grid.snap
-      ? snapPoint({ x: event.target.x(), y: event.target.y() }, floorPlan.grid.cellSizePx)
+      ? snapPoint({ x: event.target.x(), y: event.target.y() }, floorPlan.grid.cellSizePx, gridOffset)
       : { x: event.target.x(), y: event.target.y() };
 
     const nextPoints = getObjectPoints(object).map((point, index) => (index === pointIndex ? nextPoint : point));
@@ -418,10 +419,21 @@ function imageShift(rotation: number, width: number, height: number): Point {
   }
 }
 
-function createGridLines(width: number, height: number, gridSize: number) {
+function createGridLines(width: number, height: number, gridSize: number, offset: Point) {
   const lines: Array<{ key: string; points: number[]; major: boolean }> = [];
-  for (let x = 0; x <= width; x += gridSize) lines.push({ key: `v-${x}`, points: [x, 0, x, height], major: x % (gridSize * 5) === 0 });
-  for (let y = 0; y <= height; y += gridSize) lines.push({ key: `h-${y}`, points: [0, y, width, y], major: y % (gridSize * 5) === 0 });
+
+  // Сетка может начинаться не с угла картинки, поэтому идём от первой линии,
+  // попадающей на план, а не от нуля.
+  const startX = offset.x - Math.ceil(offset.x / gridSize) * gridSize;
+  const startY = offset.y - Math.ceil(offset.y / gridSize) * gridSize;
+
+  for (let x = startX, index = 0; x <= width; x += gridSize, index += 1) {
+    if (x >= 0) lines.push({ key: `v-${index}`, points: [x, 0, x, height], major: index % 5 === 0 });
+  }
+  for (let y = startY, index = 0; y <= height; y += gridSize, index += 1) {
+    if (y >= 0) lines.push({ key: `h-${index}`, points: [0, y, width, y], major: index % 5 === 0 });
+  }
+
   return lines;
 }
 

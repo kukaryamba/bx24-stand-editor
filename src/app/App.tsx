@@ -193,7 +193,12 @@ export function App() {
     // Планы чертят по сетке, и её шаг на картинке — это и есть масштаб.
     const detection = detectGridStep(image);
     if (detection) {
-      updateFloorPlanGrid(activePlan.id, { cellSizePx: detection.cellSizePx, metersPerCell: 1 });
+      updateFloorPlanGrid(activePlan.id, {
+        cellSizePx: detection.cellSizePx,
+        metersPerCell: 1,
+        offsetX: detection.offsetX,
+        offsetY: detection.offsetY,
+      });
       setGridNotice(
         `Масштаб определён по сетке чертежа: ${formatMeters(detection.cellSizePx)} пикселя на метр. Проверьте по стенду с известной площадью и поправьте, если клетка чертежа не равна метру.`,
       );
@@ -363,6 +368,29 @@ export function App() {
               />
             </label>
             <input type="range" min={4} max={120} step={1} value={activePlan.grid.cellSizePx} onChange={(event) => updateFloorPlanGrid(activePlan.id, { cellSizePx: Number(event.target.value), metersPerCell: 1 })} />
+
+            <h2>Сдвиг сетки</h2>
+            <div className="stand-size">
+              <label>
+                По горизонтали
+                <input
+                  type="number"
+                  step={0.5}
+                  value={activePlan.grid.offsetX ?? 0}
+                  onChange={(event) => updateFloorPlanGrid(activePlan.id, { offsetX: Number(event.target.value) || 0 })}
+                />
+              </label>
+              <label>
+                По вертикали
+                <input
+                  type="number"
+                  step={0.5}
+                  value={activePlan.grid.offsetY ?? 0}
+                  onChange={(event) => updateFloorPlanGrid(activePlan.id, { offsetY: Number(event.target.value) || 0 })}
+                />
+              </label>
+            </div>
+            <p>Сетка чертежа редко начинается ровно с угла картинки. Подвиньте, чтобы линии совпали с клетками плана.</p>
             <p>Одна клетка сетки равна 1 x 1 м. Подберите размер клетки в пикселях так, чтобы сетка совпала с масштабом фоновой картинки павильона.</p>
           </div>
         ) : null}
