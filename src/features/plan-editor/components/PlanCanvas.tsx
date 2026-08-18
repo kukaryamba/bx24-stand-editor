@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type Konva from "konva";
 import { Circle, Group, Image, Layer, Line, Rect, Stage, Text } from "react-konva";
 import { getFurnitureImageUrl, getFurnitureItem } from "../../../shared/domain/furniture";
-import { getCanvasObject, getFloorPlan, getFloorPlanLayers, getFloorPlanObjects, getObjectFurnitureMeta, getObjectPoints, getObjectStandMeta } from "../../../shared/domain/project";
+import { getCanvasObject, getFloorPlan, getFloorPlanLayers, getFloorPlanObjects, getObjectFurnitureMeta, getObjectPoints, getObjectStandMeta, isWallObject } from "../../../shared/domain/project";
 import { currentDealColor, statusColors } from "../../../shared/domain/status";
 import type { CanvasObject, Point } from "../../../shared/domain/types";
 import { flattenPoints, polygonArea, polygonCentroid, snapPoint } from "../../../shared/geometry/polygon";
@@ -189,7 +189,9 @@ export function PlanCanvas() {
 
   const handleFurnitureDragEnd = (object: CanvasObject, event: Konva.KonvaEventObject<DragEvent>) => {
     const raw = { x: event.target.x(), y: event.target.y() };
-    const origin = floorPlan.grid.snap ? snapPoint(raw, floorPlan.grid.cellSizePx, gridOffset) : raw;
+    // К сетке цепляются только стены: по ним считают погонные метры панелей.
+    // Мебель ставится свободно, ей середина клетки не мешает.
+    const origin = floorPlan.grid.snap && isWallObject(object) ? snapPoint(raw, floorPlan.grid.cellSizePx, gridOffset) : raw;
     event.target.position(origin);
     moveFurniture(object.id, origin);
   };

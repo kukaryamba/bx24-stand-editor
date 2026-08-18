@@ -1,3 +1,4 @@
+import { getFurnitureItem } from "./furniture";
 import type {
   CanvasObject,
   ExhibitionProject,
@@ -69,6 +70,20 @@ export function standPlanIdFor(standObjectId: string): string {
 export function findStandPlan(project: ExhibitionProject | null, standObjectId: string): FloorPlan | null {
   if (!project) return null;
   return project.floorPlans.find((plan) => plan.standObjectId === standObjectId) ?? null;
+}
+
+/**
+ * Стена ли это.
+ *
+ * Стены обязаны идти по рёбрам клеток: по ним считают погонные метры панелей,
+ * и стык между двумя панелями не должен попадать в середину клетки. Остальная
+ * мебель ставится свободно — стол посреди клетки никому не мешает.
+ */
+export function isWallObject(object: CanvasObject): boolean {
+  const meta = getObjectFurnitureMeta(object);
+  if (!meta) return false;
+
+  return getFurnitureItem(meta.itemId)?.category === "walls";
 }
 
 /**
