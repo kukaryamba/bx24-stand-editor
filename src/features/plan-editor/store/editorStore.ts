@@ -10,6 +10,7 @@ import {
   formatMeters,
   getCanvasObject,
   getFloorPlan,
+  getFloorPlanKind,
   getFloorPlanObjects,
   getObjectFurnitureMeta,
   getObjectPoints,
@@ -52,6 +53,8 @@ export const maxScale = 3;
 
 /** Поля вокруг плана, когда он вписан в холст. */
 const fitPadding = 24;
+/** Насколько ужимать площадку стенда против точного вписывания. */
+const standFitZoom = 0.8;
 
 type EditorState = {
   project: ExhibitionProject | null;
@@ -624,7 +627,12 @@ function fitViewport(project: ExhibitionProject | null, floorPlanId: string | nu
     width: Math.max(stageSize.width - fitPadding * 2, 1),
     height: Math.max(stageSize.height - fitPadding * 2, 1),
   };
-  const scale = Math.min(Math.max(Math.min(available.width / plan.width, available.height / plan.height), minScale), maxScale);
+
+  // Площадку стенда показываем с запасом: в портале фрейм невысокий, и план
+  // впритык упирается в края — некуда вытащить предмет и не видно габаритов.
+  const zoom = getFloorPlanKind(plan) === "stand" ? standFitZoom : 1;
+  const exact = Math.min(available.width / plan.width, available.height / plan.height) * zoom;
+  const scale = Math.min(Math.max(exact, minScale), maxScale);
 
   return {
     scale,
