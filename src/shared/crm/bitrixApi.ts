@@ -19,6 +19,8 @@ type Bx24 = {
   callMethod(method: string, params: Record<string, unknown>, callback: (result: Bx24CallResult<unknown>) => void): void;
   /** Сообщает порталу, что установка завершена. Без этого приложение остаётся неустановленным. */
   installFinish?(): void;
+  /** Меняет размер фрейма, в котором портал показывает приложение. */
+  resizeWindow?(width: number, height: number): void;
 };
 
 declare global {
@@ -212,6 +214,27 @@ export async function bindDealTab(title: string): Promise<"bound" | "rebound" | 
 
   return dealTabs.length > 0 ? "rebound" : "bound";
 }
+
+/**
+ * Просит портал вытянуть фрейм приложения почти на весь экран.
+ *
+ * По умолчанию встроенному приложению достаётся невысокая полоса, и редактор
+ * с панелями в неё не помещается: панели уходят во внутреннюю прокрутку.
+ * Точную высоту окна портала измерить нельзя — оно на другом домене, поэтому
+ * отталкиваемся от высоты экрана, оставляя запас на шапку и карточку сделки.
+ */
+export function stretchAppWindow(): void {
+  const resize = window.BX24?.resizeWindow;
+  if (!resize) return;
+
+  const height = Math.max(minAppHeight, window.screen.availHeight - portalChrome);
+  resize(document.documentElement.clientWidth || 1200, height);
+}
+
+/** Ниже этого редактором пользоваться неудобно. */
+const minAppHeight = 700;
+/** Запас на шапку портала, вкладки карточки и панель задач. */
+const portalChrome = 260;
 
 export function finishInstall(): void {
   window.BX24?.installFinish?.();

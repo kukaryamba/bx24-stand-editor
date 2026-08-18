@@ -15,7 +15,7 @@ import { useEditorStore } from "../features/plan-editor/store/editorStore";
 import { defaultStandSizeM, findStandByDeal, formatMeters, getFloorPlan, getFloorPlanKind, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
 import { detectGridStep } from "../shared/geometry/detectGrid";
 import { standTemplates } from "../shared/domain/standTemplates";
-import { dealTabPlacement } from "../shared/crm/bitrixApi";
+import { dealTabPlacement, stretchAppWindow } from "../shared/crm/bitrixApi";
 import { bitrixCrmProvider } from "../shared/crm/bitrixCrmProvider";
 import { loadExpoPlan, mergeWithLocalBackgrounds, saveExpoPlan, stripForPortal } from "../shared/crm/expoPlanRepository";
 import type { EditorScreen } from "../shared/domain/types";
@@ -95,6 +95,10 @@ export function App() {
       setCrmContext(context);
       if (context.provider !== "bitrix24") return;
 
+      // Портал даёт встроенному приложению невысокую полосу — просим больше,
+      // иначе панели уходят во внутреннюю прокрутку.
+      stretchAppWindow();
+
       try {
         const portal = await loadExpoPlan();
         if (cancelled || !portal) return;
@@ -130,6 +134,15 @@ export function App() {
 
     return () => window.clearTimeout(timer);
   }, [isDirty, project, saveWorkspace]);
+
+  // Окно браузера могли развернуть уже после запуска — просим место заново.
+  useEffect(() => {
+    if (crm.provider !== "bitrix24") return;
+
+    const onResize = () => stretchAppWindow();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [crm.provider]);
 
   // Автосохранение в портал. Отдельно от локального: там isDirty гасится
   // через полсекунды, и таймер портала не успевал бы сработать.
