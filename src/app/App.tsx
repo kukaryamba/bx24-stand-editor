@@ -11,7 +11,8 @@ import { exportPlanToPng } from "../features/plan-editor/exportPlanImage";
 import { Toolbar } from "../features/plan-editor/components/Toolbar";
 import { useCategoryAccess } from "../features/plan-editor/hooks/useCategoryAccess";
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
-import { defaultStandSizeM, getFloorPlan, getFloorPlanKind, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
+import { defaultStandSizeM, formatMeters, getFloorPlan, getFloorPlanKind, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
+import { detectGridStep } from "../shared/geometry/detectGrid";
 import { standTemplates } from "../shared/domain/standTemplates";
 import { dealTabPlacement } from "../shared/crm/bitrixApi";
 import { bitrixCrmProvider } from "../shared/crm/bitrixCrmProvider";
@@ -22,6 +23,7 @@ export function App() {
   const [startupError, setStartupError] = useState<string | null>(null);
   const [showSpecification, setShowSpecification] = useState(false);
   const [skipInstall, setSkipInstall] = useState(false);
+  const [gridNotice, setGridNotice] = useState<string | null>(null);
   const backgroundUploadRef = useRef<HTMLInputElement | null>(null);
   const mode = useEditorStore((state) => state.mode);
   const tool = useEditorStore((state) => state.tool);
@@ -103,7 +105,9 @@ export function App() {
     if (!file || !activePlan) return;
 
     const dataUrl = await readFileAsDataUrl(file);
-    const size = await readImageSize(dataUrl);
+    const image = await readImage(dataUrl);
+    const size = { width: image.naturalWidth || image.width, height: image.naturalHeight || image.height };
+
     setFloorPlanBackground(
       activePlan.id,
       {
@@ -114,6 +118,18 @@ export function App() {
       },
       size,
     );
+
+    // Планы чертят по сетке, и её шаг на картинке — это и есть масштаб.
+    const detection = detectGridStep(image);
+    if (detection) {
+      updateFloorPlanGrid(activePlan.id, { cellSizePx: detection.cellSizePx, metersPerCell: 1 });
+      setGridNotice(
+        `Масштаб определён по сетке чертежа: ${formatMeters(detection.cellSizePx)} пикселя на метр. Проверьте по стенду с известной площадью и поправьте, если клетка чертежа не равна метру.`,
+      );
+    } else {
+      setGridNotice("Сетку на картинке найти не удалось — задайте масштаб вручную.");
+    }
+
     // План только что сменил размер — показываем его целиком, иначе он уезжает за край.
     fitToScreen();
     event.target.value = "";
@@ -197,7 +213,7 @@ export function App() {
 
         <div className="panel-section">
           <h2>{activePlan?.title ?? "План"}</h2>
-          <p>{startupError ?? "Сетка обязательна: все вершины стендов привязываются к узлам. Новый стенд создаётся кликами по сетке, замыкается кликом по первой точке."}</p>
+          <p>{startupError ?? gridNotice ?? "Сетка обязательна: все вершины стендов привязываются к узлам. Новый стенд создаётся кликами по сетке, замыкается кликом по первой точке."}</p>
         </div>
 
         {activePlan && screen === "stand" ? (
@@ -336,11 +352,11 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
-function readImageSize(src: string): Promise<{ width: number; height: number }> {
+function readImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new window.Image();
-    image.onload = () => resolve({ width: image.width, height: image.height });
-    image.onerror = () => reject(new Error("Не удалось определить размер фонового изображения."));
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Не удалось прочитать фоновое изображение."));
     image.src = src;
   });
 }
