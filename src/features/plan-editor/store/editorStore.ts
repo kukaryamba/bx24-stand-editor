@@ -5,6 +5,7 @@ import {
   createStandFloorPlan,
   defaultStandSizeM,
   findFloorPlanByKind,
+  findStandByDeal,
   findStandPlan,
   formatMeters,
   getCanvasObject,
@@ -387,10 +388,25 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return;
     }
 
-    // На экран стенда попадаем через конкретный стенд: последний открытый,
-    // иначе первый заведённый, иначе первый стенд на карте выставки.
+    // Приложение открыто из карточки сделки, значит показываем стенд этой
+    // сделки. Подставлять вместо него чужой нельзя: это ввело бы в заблуждение.
+    const standOfDeal = findStandByDeal(project, state.crm.dealId);
+    if (state.crm.dealId && !standOfDeal) {
+      set({
+        validationMessage:
+          "К этой сделке ещё не привязан стенд. Выберите его на карте выставки и нажмите «Забронировать на текущую сделку».",
+      });
+      return;
+    }
+
+    // Без сделки — последний открытый стенд, иначе первый заведённый,
+    // иначе первый стенд на карте выставки.
     const plans = getStandPlans(project);
-    const target = state.activeStandObjectId ?? plans[0]?.standObjectId ?? getFloorPlanObjects(project, findFloorPlanByKind(project, "expo")?.id ?? null).find((object) => object.kind === "stand")?.id;
+    const target =
+      standOfDeal?.id ??
+      state.activeStandObjectId ??
+      plans[0]?.standObjectId ??
+      getFloorPlanObjects(project, findFloorPlanByKind(project, "expo")?.id ?? null).find((object) => object.kind === "stand")?.id;
 
     if (!target) {
       set({ validationMessage: "На карте выставки пока нет ни одного стенда." });

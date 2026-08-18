@@ -12,7 +12,7 @@ import { Toolbar } from "../features/plan-editor/components/Toolbar";
 import { useCategoryAccess } from "../features/plan-editor/hooks/useCategoryAccess";
 import { useStandPlanSync } from "../features/plan-editor/hooks/useStandPlanSync";
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
-import { defaultStandSizeM, formatMeters, getFloorPlan, getFloorPlanKind, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
+import { defaultStandSizeM, findStandByDeal, formatMeters, getFloorPlan, getFloorPlanKind, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
 import { detectGridStep } from "../shared/geometry/detectGrid";
 import { standTemplates } from "../shared/domain/standTemplates";
 import { dealTabPlacement } from "../shared/crm/bitrixApi";
@@ -101,6 +101,13 @@ export function App() {
         const merged = mergeWithLocalBackgrounds(portal, useEditorStore.getState().project);
         portalSavedRef.current = JSON.stringify(stripForPortal(merged));
         applyPortalProject(merged);
+
+        // Приложение открыто вкладкой в сделке — показываем сразу её стенд,
+        // а не карту выставки: ради него вкладку и открывают.
+        const standOfDeal = findStandByDeal(merged, context.dealId);
+        if (context.placement === dealTabPlacement && standOfDeal) {
+          useEditorStore.getState().openStandPlan(standOfDeal.id);
+        }
       } catch (error) {
         if (cancelled) return;
         setPortalError(error instanceof Error ? error.message : "Не удалось получить карту выставки из портала.");

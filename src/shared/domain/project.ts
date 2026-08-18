@@ -71,6 +71,20 @@ export function findStandPlan(project: ExhibitionProject | null, standObjectId: 
   return project.floorPlans.find((plan) => plan.standObjectId === standObjectId) ?? null;
 }
 
+/**
+ * Стенд, закреплённый за сделкой.
+ *
+ * Приложение открывается из карточки сделки, и показывать оно должно стенд
+ * именно этой сделки, а не первый попавшийся.
+ */
+export function findStandByDeal(project: ExhibitionProject | null, dealId: string | null): CanvasObject | null {
+  if (!project || !dealId) return null;
+
+  return (
+    project.objects.find((object) => object.kind === "stand" && getObjectStandMeta(object)?.dealId === dealId) ?? null
+  );
+}
+
 /** Все заведённые площадки стендов. */
 export function getStandPlans(project: ExhibitionProject | null): FloorPlan[] {
   if (!project) return [];
