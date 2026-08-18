@@ -533,7 +533,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setViewport: (viewport) => set((state) => ({ viewport: { ...state.viewport, ...viewport } })),
   setStageSize: (size) => set({ stageSize: size }),
   undo: () => {
-    const { historyPast, historyFuture, project } = get();
+    const { historyPast, historyFuture, project, draftPoints } = get();
+
+    // Пока стенд рисуется, отмена снимает последнюю поставленную точку.
+    // Откатывать весь предыдущий шаг здесь неожиданно: с точки зрения
+    // пользователя он ещё не закончил текущее действие.
+    if (draftPoints.length > 0) {
+      set({ draftPoints: draftPoints.slice(0, -1), validationMessage: null });
+      return;
+    }
+
     if (!project || historyPast.length === 0) return;
 
     const previous = historyPast[historyPast.length - 1];

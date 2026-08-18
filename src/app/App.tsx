@@ -53,6 +53,7 @@ export function App() {
   const activeFloorPlanId = useEditorStore((state) => state.activeFloorPlanId);
   const isDirty = useEditorStore((state) => state.isDirty);
   const historyPastLength = useEditorStore((state) => state.historyPast.length);
+  const draftLength = useEditorStore((state) => state.draftPoints.length);
   const historyFutureLength = useEditorStore((state) => state.historyFuture.length);
   const categoryAccess = useCategoryAccess(crm.provider === "bitrix24" && crm.placement === dealTabPlacement, crm.dealId);
   const activePlan = useMemo(() => getFloorPlan(project, activeFloorPlanId), [activeFloorPlanId, project]);
@@ -283,7 +284,7 @@ export function App() {
                 updateFloorPlanGrid(activePlan.id, { enabled: !activePlan.grid.enabled });
               },
             },
-            { icon: Undo2, label: "Undo", onClick: undo, disabled: historyPastLength === 0 },
+            { icon: Undo2, label: "Undo", onClick: undo, disabled: historyPastLength === 0 && draftLength === 0 },
             { icon: Redo2, label: "Redo", onClick: redo, disabled: historyFutureLength === 0 },
             { icon: ZoomIn, label: "Fit", onClick: fitToScreen },
             { icon: ZoomIn, label: "Увеличить", onClick: zoomIn },
