@@ -27,14 +27,17 @@ type StoredPlan = {
  * Готовит проект к отправке: выбрасывает то, что в настройки не влезет
  * или хранится в другом месте.
  *
- * Фоновая картинка — сотни килобайт в виде текста, ей место на Диске.
+ * Загруженная пользователем картинка лежит в проекте текстом и весит сотни
+ * килобайт — её вырезаем. А ссылка на план из состава приложения занимает
+ * несколько десятков символов и сохраняется: по ней подложку увидят все.
+ *
  * Предметы на стендах лежат в сделках, дублировать их здесь незачем.
  */
 export function stripForPortal(project: ExhibitionProject): ExhibitionProject {
   return {
     ...project,
     floorPlans: project.floorPlans.map((plan) =>
-      plan.background
+      plan.background && plan.background.imageUrl.startsWith("data:")
         ? { ...plan, background: { ...plan.background, imageUrl: "" } }
         : plan,
     ),

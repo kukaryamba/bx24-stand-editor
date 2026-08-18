@@ -14,6 +14,7 @@ import { useStandPlanSync } from "../features/plan-editor/hooks/useStandPlanSync
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
 import { defaultStandSizeM, findStandByDeal, formatMeters, getFloorPlan, getFloorPlanKind, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
 import { detectGridStep } from "../shared/geometry/detectGrid";
+import { bundledPlans } from "../shared/domain/bundledPlans";
 import { standTemplates } from "../shared/domain/standTemplates";
 import { dealTabPlacement, stretchAppWindow } from "../shared/crm/bitrixApi";
 import { bitrixCrmProvider } from "../shared/crm/bitrixCrmProvider";
@@ -389,6 +390,30 @@ export function App() {
               />
             </label>
             <input type="range" min={4} max={120} step={1} value={activePlan.grid.cellSizePx} onChange={(event) => updateFloorPlanGrid(activePlan.id, { cellSizePx: Number(event.target.value), metersPerCell: 1 })} />
+
+            <h2>Готовые планы</h2>
+            <div className="stand-templates">
+              {bundledPlans.map((bundled) => (
+                <button
+                  key={bundled.id}
+                  type="button"
+                  onClick={() => {
+                    setFloorPlanBackground(activePlan.id, bundled.background, {
+                      width: bundled.background.width,
+                      height: bundled.background.height,
+                    });
+                    updateFloorPlanGrid(activePlan.id, bundled.grid);
+                    setGridNotice(null);
+                    fitToScreen();
+                  }}
+                  title={bundled.description}
+                >
+                  <strong>{bundled.title}</strong>
+                  <span>{bundled.description}</span>
+                </button>
+              ))}
+            </div>
+            <p>План из состава приложения виден всем сотрудникам, а масштаб у него уже выверен. Своя картинка остаётся только в вашем браузере.</p>
 
             <h2>Сдвиг сетки</h2>
             <div className="stand-size">
