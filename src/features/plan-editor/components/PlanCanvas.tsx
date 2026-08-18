@@ -38,6 +38,8 @@ export function PlanCanvas() {
   const rotateFurniture = useEditorStore((state) => state.rotateFurniture);
   const openStandPlan = useEditorStore((state) => state.openStandPlan);
   const setViewport = useEditorStore((state) => state.setViewport);
+  const undoAction = useEditorStore((state) => state.undo);
+  const redoAction = useEditorStore((state) => state.redo);
   const floorPlan = useMemo(() => getFloorPlan(project, activeFloorPlanId), [activeFloorPlanId, project]);
   const layers = useMemo(() => getFloorPlanLayers(project, activeFloorPlanId), [activeFloorPlanId, project]);
   const objects = useMemo(() => getFloorPlanObjects(project, activeFloorPlanId), [activeFloorPlanId, project]);
@@ -60,6 +62,19 @@ export function PlanCanvas() {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target;
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
+
+      // Отмена и повтор по-русски набираются другими буквами, поэтому смотрим
+      // на физическую клавишу, а не на введённый символ.
+      if (event.ctrlKey || event.metaKey) {
+        const redo = event.code === "KeyY" || (event.code === "KeyZ" && event.shiftKey);
+        const undo = event.code === "KeyZ" && !event.shiftKey;
+        if (!redo && !undo) return;
+
+        event.preventDefault();
+        if (redo) redoAction();
+        else undoAction();
+        return;
+      }
 
       // Поворот выбранного предмета: R или русская К на том же месте клавиатуры.
       if (selectedObjectId && ["r", "к"].includes(event.key.toLowerCase())) {
@@ -85,7 +100,7 @@ export function PlanCanvas() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [rotateFurniture, selectedObjectId, setViewport, viewport.x, viewport.y]);
+  }, [redoAction, rotateFurniture, selectedObjectId, setViewport, undoAction, viewport.x, viewport.y]);
 
   useEffect(() => {
     if (!middleButtonPanning) return;
