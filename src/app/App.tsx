@@ -16,6 +16,7 @@ import { detectGridStep } from "../shared/geometry/detectGrid";
 import { standTemplates } from "../shared/domain/standTemplates";
 import { dealTabPlacement } from "../shared/crm/bitrixApi";
 import { bitrixCrmProvider } from "../shared/crm/bitrixCrmProvider";
+import { loadExpoPlan, mergeWithLocalBackgrounds, saveExpoPlan, stripForPortal } from "../shared/crm/expoPlanRepository";
 import type { EditorScreen } from "../shared/domain/types";
 import { localPlanRepository } from "../shared/storage/localPlanRepository";
 
@@ -24,6 +25,9 @@ export function App() {
   const [showSpecification, setShowSpecification] = useState(false);
   const [skipInstall, setSkipInstall] = useState(false);
   const [gridNotice, setGridNotice] = useState<string | null>(null);
+  const [portalError, setPortalError] = useState<string | null>(null);
+  /** Что уже отправлено в портал — чтобы не слать одно и то же. */
+  const portalSavedRef = useRef<string | null>(null);
   const backgroundUploadRef = useRef<HTMLInputElement | null>(null);
   const mode = useEditorStore((state) => state.mode);
   const tool = useEditorStore((state) => state.tool);
@@ -77,6 +81,55 @@ export function App() {
 
     return () => window.clearTimeout(timer);
   }, [isDirty, project, saveWorkspace]);
+
+  // Карта выставки из портала важнее локальной копии: она общая для всех.
+  useEffect(() => {
+    if (crm.provider !== "bitrix24") return;
+
+    let cancelled = false;
+
+    void loadExpoPlan()
+      .then((portalProject) => {
+        if (cancelled || !portalProject) return;
+
+        const merged = mergeWithLocalBackgrounds(portalProject, useEditorStore.getState().project);
+        portalSavedRef.current = JSON.stringify(stripForPortal(merged));
+        loadProject(merged);
+      })
+      .catch((error: unknown) => {
+        console.warn("Не удалось получить карту выставки из портала.", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [crm.provider, loadProject]);
+
+  // Автосохранение в портал. Отдельно от локального: там isDirty гасится
+  // через полсекунды, и таймер портала не успевал бы сработать.
+  useEffect(() => {
+    if (crm.provider !== "bitrix24" || !project?.settings.autosave) return;
+
+    const snapshot = JSON.stringify(stripForPortal(project));
+    if (portalSavedRef.current === null) {
+      portalSavedRef.current = snapshot;
+      return;
+    }
+    if (portalSavedRef.current === snapshot) return;
+
+    const timer = window.setTimeout(() => {
+      void saveExpoPlan(project)
+        .then(() => {
+          portalSavedRef.current = snapshot;
+          setPortalError(null);
+        })
+        .catch((error: unknown) => {
+          setPortalError(error instanceof Error ? error.message : "Не удалось сохранить карту выставки в портал.");
+        });
+    }, 2000);
+
+    return () => window.clearTimeout(timer);
+  }, [crm.provider, project]);
 
   const openScreen = (next: EditorScreen) => {
     showFloorPlanKind(next);
@@ -213,7 +266,7 @@ export function App() {
 
         <div className="panel-section">
           <h2>{activePlan?.title ?? "План"}</h2>
-          <p>{startupError ?? gridNotice ?? "Сетка обязательна: все вершины стендов привязываются к узлам. Новый стенд создаётся кликами по сетке, замыкается кликом по первой точке."}</p>
+          <p>{startupError ?? portalError ?? gridNotice ?? "Сетка обязательна: все вершины стендов привязываются к узлам. Новый стенд создаётся кликами по сетке, замыкается кликом по первой точке."}</p>
         </div>
 
         {activePlan && screen === "stand" ? (
