@@ -69,6 +69,7 @@ type EditorState = {
   historyPast: ExhibitionProject[];
   historyFuture: ExhibitionProject[];
   loadProject: (project: ExhibitionProject) => void;
+  applyPortalProject: (project: ExhibitionProject) => void;
   replacePlanObjects: (floorPlanId: string | null, objects: CanvasObject[]) => void;
   createSnapshot: () => ExhibitionProject;
   saveWorkspace: () => void;
@@ -126,6 +127,28 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   historyFuture: [] as ExhibitionProject[],
 
   loadProject: (project) => set({ project, activeFloorPlanId: project.floorPlans[0]?.id ?? null, historyPast: [], historyFuture: [], isDirty: false }),
+  /**
+   * Принимает карту выставки из портала, не сбрасывая навигацию.
+   *
+   * loadProject для этого не годится: она открывает первый план проекта,
+   * то есть выбрасывает с площадки стенда на общий план, если данные пришли
+   * уже после того, как пользователь начал работать.
+   */
+  applyPortalProject: (project) => {
+    const { activeFloorPlanId, activeStandObjectId } = get();
+    const keepOpenPlan = project.floorPlans.some((plan) => plan.id === activeFloorPlanId);
+
+    set({
+      project,
+      activeFloorPlanId: keepOpenPlan ? activeFloorPlanId : project.floorPlans[0]?.id ?? null,
+      activeStandObjectId: keepOpenPlan ? activeStandObjectId : null,
+      selectedObjectId: null,
+      draftPoints: [],
+      historyPast: [],
+      historyFuture: [],
+      isDirty: false,
+    });
+  },
   /**
    * Заменяет предметы одного плана — например, загруженные из сделки.
    *

@@ -10,6 +10,7 @@ import { StandNavigator } from "../features/plan-editor/components/StandNavigato
 import { exportPlanToPng } from "../features/plan-editor/exportPlanImage";
 import { Toolbar } from "../features/plan-editor/components/Toolbar";
 import { useCategoryAccess } from "../features/plan-editor/hooks/useCategoryAccess";
+import { useStandPlanSync } from "../features/plan-editor/hooks/useStandPlanSync";
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
 import { defaultStandSizeM, formatMeters, getFloorPlan, getFloorPlanKind, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
 import { detectGridStep } from "../shared/geometry/detectGrid";
@@ -32,6 +33,7 @@ export function App() {
   const mode = useEditorStore((state) => state.mode);
   const tool = useEditorStore((state) => state.tool);
   const loadProject = useEditorStore((state) => state.loadProject);
+  const applyPortalProject = useEditorStore((state) => state.applyPortalProject);
   const setCrmContext = useEditorStore((state) => state.setCrmContext);
   const saveWorkspace = useEditorStore((state) => state.saveWorkspace);
   const setTool = useEditorStore((state) => state.setTool);
@@ -54,6 +56,7 @@ export function App() {
   const historyFutureLength = useEditorStore((state) => state.historyFuture.length);
   const categoryAccess = useCategoryAccess(crm.provider === "bitrix24" && crm.placement === dealTabPlacement, crm.dealId);
   const activePlan = useMemo(() => getFloorPlan(project, activeFloorPlanId), [activeFloorPlanId, project]);
+  const standSyncError = useStandPlanSync(activePlan, crm.provider === "bitrix24");
   const planLayers = useMemo(() => getFloorPlanLayers(project, activeFloorPlanId), [activeFloorPlanId, project]);
   // Экран не хранится отдельно: он определяется тем, какой план открыт.
   // Иначе переход в стенд с карты не переключал бы панели.
@@ -63,14 +66,52 @@ export function App() {
     [activePlan, screen],
   );
 
+  // Строго по очереди: сначала локальная копия, потом портал.
+  // Параллельно эти два источника гонялись, и кто отвечал последним, тот и
+  // выигрывал — локальная копия затирала общую карту и уезжала в портал.
   useEffect(() => {
-    void localPlanRepository.load().then(loadProject).catch((error: unknown) => {
-      setStartupError(error instanceof Error ? error.message : "Не удалось загрузить данные приложения.");
-    });
-    void bitrixCrmProvider.init().then(setCrmContext).catch((error: unknown) => {
-      console.warn("CRM init failed. Local mode is active.", error);
-    });
-  }, [loadProject, setCrmContext]);
+    let cancelled = false;
+
+    const start = async () => {
+      try {
+        const local = await localPlanRepository.load();
+        if (cancelled) return;
+        loadProject(local);
+      } catch (error) {
+        if (cancelled) return;
+        setStartupError(error instanceof Error ? error.message : "Не удалось загрузить данные приложения.");
+      }
+
+      let context;
+      try {
+        context = await bitrixCrmProvider.init();
+      } catch (error) {
+        console.warn("CRM init failed. Local mode is active.", error);
+        return;
+      }
+
+      if (cancelled) return;
+      setCrmContext(context);
+      if (context.provider !== "bitrix24") return;
+
+      try {
+        const portal = await loadExpoPlan();
+        if (cancelled || !portal) return;
+
+        const merged = mergeWithLocalBackgrounds(portal, useEditorStore.getState().project);
+        portalSavedRef.current = JSON.stringify(stripForPortal(merged));
+        applyPortalProject(merged);
+      } catch (error) {
+        if (cancelled) return;
+        setPortalError(error instanceof Error ? error.message : "Не удалось получить карту выставки из портала.");
+      }
+    };
+
+    void start();
+    return () => {
+      cancelled = true;
+    };
+  }, [applyPortalProject, loadProject, setCrmContext]);
 
   useEffect(() => {
     if (!project?.settings.autosave || !isDirty) return;
@@ -81,29 +122,6 @@ export function App() {
 
     return () => window.clearTimeout(timer);
   }, [isDirty, project, saveWorkspace]);
-
-  // Карта выставки из портала важнее локальной копии: она общая для всех.
-  useEffect(() => {
-    if (crm.provider !== "bitrix24") return;
-
-    let cancelled = false;
-
-    void loadExpoPlan()
-      .then((portalProject) => {
-        if (cancelled || !portalProject) return;
-
-        const merged = mergeWithLocalBackgrounds(portalProject, useEditorStore.getState().project);
-        portalSavedRef.current = JSON.stringify(stripForPortal(merged));
-        loadProject(merged);
-      })
-      .catch((error: unknown) => {
-        console.warn("Не удалось получить карту выставки из портала.", error);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [crm.provider, loadProject]);
 
   // Автосохранение в портал. Отдельно от локального: там isDirty гасится
   // через полсекунды, и таймер портала не успевал бы сработать.
@@ -266,7 +284,7 @@ export function App() {
 
         <div className="panel-section">
           <h2>{activePlan?.title ?? "План"}</h2>
-          <p>{startupError ?? portalError ?? gridNotice ?? "Сетка обязательна: все вершины стендов привязываются к узлам. Новый стенд создаётся кликами по сетке, замыкается кликом по первой точке."}</p>
+          <p>{startupError ?? portalError ?? standSyncError ?? gridNotice ?? "Сетка обязательна: все вершины стендов привязываются к узлам. Новый стенд создаётся кликами по сетке, замыкается кликом по первой точке."}</p>
         </div>
 
         {activePlan && screen === "stand" ? (
