@@ -136,13 +136,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
    * уже после того, как пользователь начал работать.
    */
   applyPortalProject: (project) => {
-    const { activeFloorPlanId, activeStandObjectId } = get();
-    const keepOpenPlan = project.floorPlans.some((plan) => plan.id === activeFloorPlanId);
-
     set({
       project,
-      activeFloorPlanId: keepOpenPlan ? activeFloorPlanId : project.floorPlans[0]?.id ?? null,
-      activeStandObjectId: keepOpenPlan ? activeStandObjectId : null,
+      ...keepOpenPlan(project, get()),
       selectedObjectId: null,
       draftPoints: [],
       historyPast: [],
@@ -543,7 +539,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const previous = historyPast[historyPast.length - 1];
     set({
       project: previous,
-      activeFloorPlanId: previous.floorPlans[0]?.id ?? null,
+      ...keepOpenPlan(previous, get()),
       historyPast: historyPast.slice(0, -1),
       historyFuture: [project, ...historyFuture],
       isDirty: true,
@@ -559,7 +555,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const [next, ...rest] = historyFuture;
     set({
       project: next,
-      activeFloorPlanId: next.floorPlans[0]?.id ?? null,
+      ...keepOpenPlan(next, get()),
       historyPast: [...historyPast, project],
       historyFuture: rest,
       isDirty: true,
@@ -573,6 +569,34 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 export const standStatuses: StandStatus[] = ["available", "reserved", "sold", "construction", "unavailable"];
 
 type EditorStateSetter = (partial: Partial<EditorState> | ((state: EditorState) => Partial<EditorState>)) => void;
+
+/**
+ * Что открыто после подмены проекта: отмены, повтора, приёма карты из портала.
+ *
+ * Раньше в этих случаях открывался первый план проекта, то есть карта
+ * выставки. Отмена действия на стенде выбрасывала на общий план, и со стороны
+ * выглядела как неработающая кнопка.
+ */
+function keepOpenPlan(
+  project: ExhibitionProject,
+  state: EditorState,
+): Pick<EditorState, "activeFloorPlanId" | "activeStandObjectId" | "viewport"> {
+  const stillThere = project.floorPlans.some((plan) => plan.id === state.activeFloorPlanId);
+  if (stillThere) {
+    return {
+      activeFloorPlanId: state.activeFloorPlanId,
+      activeStandObjectId: state.activeStandObjectId,
+      viewport: state.viewport,
+    };
+  }
+
+  const fallbackId = project.floorPlans[0]?.id ?? null;
+  return {
+    activeFloorPlanId: fallbackId,
+    activeStandObjectId: null,
+    viewport: fitViewport(project, fallbackId, state.stageSize),
+  };
+}
 
 /**
  * Масштаб и сдвиг, при которых план целиком помещается в холст.
