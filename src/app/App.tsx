@@ -11,6 +11,7 @@ import { StandNavigator } from "../features/plan-editor/components/StandNavigato
 import { exportPlanToPng } from "../features/plan-editor/exportPlanImage";
 import { Toolbar } from "../features/plan-editor/components/Toolbar";
 import { useCategoryAccess } from "../features/plan-editor/hooks/useCategoryAccess";
+import { usePanelWidths } from "../features/plan-editor/hooks/usePanelWidths";
 import { useStandPlanSync } from "../features/plan-editor/hooks/useStandPlanSync";
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
 import { defaultStandSizeM, findStandByDeal, formatMeters, getFloorPlan, getFloorPlanKind, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
@@ -29,6 +30,7 @@ export function App() {
   const [showPassport, setShowPassport] = useState(false);
   const [skipInstall, setSkipInstall] = useState(false);
   const [gridNotice, setGridNotice] = useState<string | null>(null);
+  const { widths, startResize, resetPanel } = usePanelWidths();
   const [portalError, setPortalError] = useState<string | null>(null);
   /** Что уже отправлено в портал — чтобы не слать одно и то же. */
   const portalSavedRef = useRef<string | null>(null);
@@ -262,7 +264,10 @@ export function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div
+      className="app-shell"
+      style={{ gridTemplateColumns: `${widths.left}px 6px minmax(0, 1fr) 6px ${widths.right}px` }}
+    >
       <aside className="left-panel" aria-label="Панель инструментов">
         <div className="brand">
           <span className="brand__kicker">Bitrix24 Local App</span>
@@ -486,9 +491,29 @@ export function App() {
         ) : null}
       </aside>
 
+      <div
+        className="panel-resizer"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Ширина панели инструментов"
+        title="Потяните, чтобы изменить ширину. Двойной щелчок вернёт исходную."
+        onPointerDown={startResize("left")}
+        onDoubleClick={() => resetPanel("left")}
+      />
+
       <main className="canvas-host">
         <PlanCanvas />
       </main>
+
+      <div
+        className="panel-resizer"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Ширина панели свойств"
+        title="Потяните, чтобы изменить ширину. Двойной щелчок вернёт исходную."
+        onPointerDown={startResize("right")}
+        onDoubleClick={() => resetPanel("right")}
+      />
 
       <PropertiesPanel />
 
