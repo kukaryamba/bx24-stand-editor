@@ -1,18 +1,18 @@
 {
-  "id": "project-cbsss-2024",
-  "title": "ЦБССС 24",
+  "id": "project-cbss-2026",
+  "title": "ЦБСС 2026",
   "exhibitions": [
     {
-      "id": "expo-cbsss-2024",
-      "title": "ЦБССС 24",
-      "date": "2026-09-18",
-      "description": "Демонстрационный проект редактора выставочных планов."
+      "id": "expo-cbss-2026",
+      "title": "ЦБСС 2026",
+      "date": "2026-09-30",
+      "description": "Цемент. Бетон. Сухие смеси — ВДНХ, 30 сентября — 2 октября."
     }
   ],
   "floorPlans": [
     {
       "id": "plan-main",
-      "exhibitionId": "expo-cbsss-2024",
+      "exhibitionId": "expo-cbss-2026",
       "title": "Павильон 1",
       "width": 2161,
       "height": 1614,

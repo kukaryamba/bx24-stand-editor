@@ -97,6 +97,8 @@ type EditorState = {
   openStandPlan: (standObjectId: string) => void;
   /** Возвращает на карту выставки. */
   backToExpoPlan: () => void;
+  /** Переименовывает выставку — название печатается в паспорте стенда. */
+  renameExhibition: (title: string) => void;
   /** Меняет габариты площадки стенда в метрах. */
   resizeStandPlan: (widthM: number, depthM: number) => void;
   /** Расставляет стены по типовой схеме, заменяя прежние. */
@@ -475,6 +477,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       draftPoints: [],
       validationMessage: null,
       viewport: fitViewport(project, expoPlan.id, get().stageSize),
+    });
+  },
+  renameExhibition: (title) => {
+    const project = get().project;
+    const exhibition = project?.exhibitions[0];
+    if (!project || !exhibition) return;
+
+    commitProject(set, get, {
+      ...project,
+      title,
+      exhibitions: [{ ...exhibition, title }, ...project.exhibitions.slice(1)],
     });
   },
   resizeStandPlan: (widthM, depthM) => {

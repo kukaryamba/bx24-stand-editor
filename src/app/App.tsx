@@ -47,6 +47,7 @@ export function App() {
   const updateFloorPlanGrid = useEditorStore((state) => state.updateFloorPlanGrid);
   const showFloorPlanKind = useEditorStore((state) => state.showFloorPlanKind);
   const resizeStandPlan = useEditorStore((state) => state.resizeStandPlan);
+  const renameExhibition = useEditorStore((state) => state.renameExhibition);
   const applyStandTemplate = useEditorStore((state) => state.applyStandTemplate);
   const setFloorPlanBackground = useEditorStore((state) => state.setFloorPlanBackground);
   const undo = useEditorStore((state) => state.undo);
@@ -392,6 +393,17 @@ export function App() {
               />
             </label>
             <input type="range" min={4} max={120} step={1} value={activePlan.grid.cellSizePx} onChange={(event) => updateFloorPlanGrid(activePlan.id, { cellSizePx: Number(event.target.value), metersPerCell: 1 })} />
+
+            <h2>Выставка</h2>
+            <label>
+              Название
+              <input
+                value={project?.exhibitions[0]?.title ?? ""}
+                placeholder="Например, ЦБСС 2026"
+                onChange={(event) => renameExhibition(event.target.value)}
+              />
+            </label>
+            <p>Печатается в паспорте стенда.</p>
 
             <h2>Готовые планы</h2>
             <div className="stand-templates">
