@@ -79,6 +79,9 @@ export const furnitureCatalog: FurnitureItem[] = [
   // Техника
   { id: "lcd42", catalogId: "", title: "Экран LCD 42\"", category: "equipment", widthM: 1, depthM: 0.2, image: "LCD42.png" },
   { id: "holodilnik", catalogId: "441993", title: "Холодильник 150 л", category: "equipment", widthM: 0.6, depthM: 0.6, image: "holodiljnik_150l.png" },
+  // В старом приложении у кулера не было своей картинки, показывалась заглушка,
+  // поэтому в каталог по картинкам он не попал. Обозначение нарисовано заново.
+  { id: "kuler", catalogId: "441997", title: "Кулер для воды", category: "equipment", widthM: 0.5, depthM: 0.5, image: "kuler_dlya_vody.svg" },
 
   // Прочее
   { id: "331", catalogId: "441987", title: "Настенная вешалка", category: "other", widthM: 0.6, depthM: 0.1, image: "331_nastennaya_veshalka.png" },
