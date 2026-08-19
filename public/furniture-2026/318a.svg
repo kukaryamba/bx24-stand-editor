@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 34" width="20" height="34">
+  <title>Блок розеток 220 В, 2,5 кВт</title>
+  <circle cx="10" cy="10" r="8" fill="#f7f8fa" stroke="#5b6674" stroke-width="3"/><circle cx="7.6" cy="10" r="1.6" fill="#5b6674"/><circle cx="12.4" cy="10" r="1.6" fill="#5b6674"/>
+  <text x="10" y="27" font-family="Arial, sans-serif" font-size="9.0" font-weight="bold" fill="#5b6674" text-anchor="middle" dominant-baseline="central">318a</text>
+</svg>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { furnitureCategories, getFurnitureByCategory, getFurnitureImageUrl } from "../../../shared/domain/furniture";
-import type { FurnitureCategory } from "../../../shared/domain/types";
+import type { FurnitureCategory, FurnitureSource } from "../../../shared/domain/types";
 import { useEditorStore } from "../store/editorStore";
 
 /**
@@ -12,10 +12,11 @@ import { useEditorStore } from "../store/editorStore";
  */
 export function FurniturePalette() {
   const [openCategory, setOpenCategory] = useState<FurnitureCategory>("seating");
+  const [source, setSource] = useState<FurnitureSource>("price2026");
   const addFurniture = useEditorStore((state) => state.addFurniture);
   const viewport = useEditorStore((state) => state.viewport);
 
-  const items = useMemo(() => getFurnitureByCategory(openCategory), [openCategory]);
+  const items = useMemo(() => getFurnitureByCategory(openCategory, source), [openCategory, source]);
 
   const handleAdd = (itemId: string) => {
     // Центр текущего вида в координатах плана.
@@ -29,6 +30,15 @@ export function FurniturePalette() {
   return (
     <div className="panel-section furniture-palette">
       <h2>Предметы</h2>
+
+      <div className="mode-switch" role="group" aria-label="Каталог">
+        <button className={source === "price2026" ? "is-active" : ""} onClick={() => setSource("price2026")}>
+          Прайс 2026
+        </button>
+        <button className={source === "legacy" ? "is-active" : ""} onClick={() => setSource("legacy")}>
+          Старый каталог
+        </button>
+      </div>
 
       <div className="furniture-palette__tabs">
         {furnitureCategories.map((category) => (
@@ -53,7 +63,9 @@ export function FurniturePalette() {
             title={`${item.title} — ${formatSize(item.widthM)} x ${formatSize(item.depthM)} м`}
           >
             <img src={getFurnitureImageUrl(item)} alt="" />
-            <span className="furniture-card__title">{item.title}</span>
+            <span className="furniture-card__title">
+              {item.catalogId ? <b>{item.catalogId}</b> : null} {item.title}
+            </span>
             <span className="furniture-card__size">
               {formatSize(item.widthM)} x {formatSize(item.depthM)} м
             </span>

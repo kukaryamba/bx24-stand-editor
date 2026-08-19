@@ -14,9 +14,16 @@ export type FurnitureCategory =
   | "equipment"
   | "other";
 
+/**
+ * Из какого каталога позиция: действующий прайс выставки или старое
+ * приложение. Старые позиции остаются ради уже нарисованных планов.
+ */
+export type FurnitureSource = "price2026" | "legacy";
+
 /** Позиция каталога: что можно поставить на план стенда. */
 export type FurnitureItem = {
   id: string;
+  source?: FurnitureSource;
   /** Идентификатор в каталоге CRM, по нему считается спецификация. Пустой — позиции нет в смете. */
   catalogId: string;
   title: string;

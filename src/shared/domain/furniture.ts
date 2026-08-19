@@ -1,4 +1,5 @@
-import type { FurnitureCategory, FurnitureItem } from "./types";
+import { priceCatalog2026 } from "./catalog2026";
+import type { FurnitureCategory, FurnitureItem, FurnitureSource } from "./types";
 
 /**
  * Каталог предметов для плана стенда.
@@ -90,16 +91,23 @@ export const furnitureCatalog: FurnitureItem[] = [
   { id: "zerkalo", catalogId: "", title: "Зеркало", category: "other", widthM: 0.6, depthM: 0.1, image: "zerkalo.png" },
 ];
 
-const catalogById = new Map(furnitureCatalog.map((item) => [item.id, item]));
+/**
+ * Оба каталога вместе. Старый нужен не только для вкладки: на уже
+ * нарисованных планах стоят его предметы, и по идентификатору их надо найти.
+ */
+const allFurniture: FurnitureItem[] = [...priceCatalog2026, ...furnitureCatalog];
+const catalogById = new Map(allFurniture.map((item) => [item.id, item]));
 
 export function getFurnitureItem(id: string): FurnitureItem | undefined {
   return catalogById.get(id);
 }
 
 export function getFurnitureImageUrl(item: FurnitureItem): string {
-  return `${import.meta.env.BASE_URL}furniture/${item.image}`;
+  const folder = item.source === "price2026" ? "furniture-2026" : "furniture";
+  return `${import.meta.env.BASE_URL}${folder}/${item.image}`;
 }
 
-export function getFurnitureByCategory(category: FurnitureCategory): FurnitureItem[] {
-  return furnitureCatalog.filter((item) => item.category === category);
+export function getFurnitureByCategory(category: FurnitureCategory, source: FurnitureSource = "price2026"): FurnitureItem[] {
+  const catalog = source === "price2026" ? priceCatalog2026 : furnitureCatalog;
+  return catalog.filter((item) => item.category === category);
 }
