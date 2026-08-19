@@ -77,13 +77,17 @@ export function StandPassport({ onClose }: Props) {
         </div>
 
         <div className="passport__head">
-          <h3>{exhibition}</h3>
-          <p className="passport__stand">
-            STAND // СТЕНД <strong>№ {standMeta?.number ?? plan?.title ?? "—"}</strong>
-          </p>
+          <div>
+            <h3>{exhibition}</h3>
+            <p className="passport__kicker">Паспорт стенда // Stand passport</p>
+          </div>
+          <div className="passport__number">
+            <span>STAND // СТЕНД</span>
+            <strong>№ {standMeta?.number ?? plan?.title ?? "—"}</strong>
+          </div>
         </div>
 
-        <dl className="spec-summary">
+        <dl className="passport__facts">
           <div>
             <dt>Company // Компания</dt>
             <dd>{deal?.companyName ?? (crm.provider === "bitrix24" ? "не указана" : "—")}</dd>
