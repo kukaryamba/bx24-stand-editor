@@ -9,6 +9,11 @@ import { getStage } from "./stageRegistry";
  * Пользователь этого не замечает: между сбросом и возвратом браузер не перерисовывает.
  */
 export function exportPlanToPng(plan: FloorPlan, pixelRatio = 2): void {
+  downloadDataUrl(renderPlanToDataUrl(plan, pixelRatio), `${sanitizeFileName(plan.title)}.png`);
+}
+
+/** Снимок плана целиком — для паспорта стенда и других печатных форм. */
+export function renderPlanToDataUrl(plan: FloorPlan, pixelRatio = 2): string {
   const stage = getStage();
   if (!stage) throw new Error("Холст ещё не готов.");
 
@@ -26,7 +31,7 @@ export function exportPlanToPng(plan: FloorPlan, pixelRatio = 2): void {
     stage.size({ width: plan.width, height: plan.height });
     stage.draw();
 
-    const dataUrl = stage.toDataURL({
+    return stage.toDataURL({
       mimeType: "image/png",
       pixelRatio,
       x: 0,
@@ -34,8 +39,6 @@ export function exportPlanToPng(plan: FloorPlan, pixelRatio = 2): void {
       width: plan.width,
       height: plan.height,
     });
-
-    downloadDataUrl(dataUrl, `${sanitizeFileName(plan.title)}.png`);
   } finally {
     stage.scale({ x: saved.scale, y: saved.scale });
     stage.position({ x: saved.x, y: saved.y });

@@ -6,6 +6,7 @@ import { InstallScreen } from "../features/plan-editor/components/InstallScreen"
 import { PlanCanvas } from "../features/plan-editor/components/PlanCanvas";
 import { PropertiesPanel } from "../features/plan-editor/components/PropertiesPanel";
 import { SpecificationDialog } from "../features/plan-editor/components/SpecificationDialog";
+import { StandPassport } from "../features/plan-editor/components/StandPassport";
 import { StandNavigator } from "../features/plan-editor/components/StandNavigator";
 import { exportPlanToPng } from "../features/plan-editor/exportPlanImage";
 import { Toolbar } from "../features/plan-editor/components/Toolbar";
@@ -25,6 +26,7 @@ import { localPlanRepository } from "../shared/storage/localPlanRepository";
 export function App() {
   const [startupError, setStartupError] = useState<string | null>(null);
   const [showSpecification, setShowSpecification] = useState(false);
+  const [showPassport, setShowPassport] = useState(false);
   const [skipInstall, setSkipInstall] = useState(false);
   const [gridNotice, setGridNotice] = useState<string | null>(null);
   const [portalError, setPortalError] = useState<string | null>(null);
@@ -450,6 +452,10 @@ export function App() {
               <FileText size={16} aria-hidden />
               Спецификация
             </button>
+            <button onClick={() => setShowPassport(true)}>
+              <FileText size={16} aria-hidden />
+              Паспорт стенда
+            </button>
           </div>
         ) : null}
 
@@ -475,6 +481,7 @@ export function App() {
       <PropertiesPanel />
 
       {showSpecification ? <SpecificationDialog onClose={() => setShowSpecification(false)} /> : null}
+      {showPassport ? <StandPassport onClose={() => setShowPassport(false)} /> : null}
     </div>
   );
 }

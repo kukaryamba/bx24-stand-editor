@@ -577,6 +577,69 @@ p {
   line-height: 1.4;
 }
 
+.passport__head {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #253141;
+}
+
+.passport__head h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.passport__stand {
+  margin: 0;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.passport__section {
+  margin-top: 18px;
+}
+
+.passport__section h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.passport__plan {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  border: 1px solid #d9dee7;
+  border-radius: 6px;
+}
+
+.passport__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.passport__table th,
+.passport__table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #e5e8ee;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.passport__table th {
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.passport__table img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
 .install-screen {
   display: grid;
   place-items: center;
