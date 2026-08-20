@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getDealSummary, type DealSummary } from "../../../shared/crm/dealInfo";
+import { getPassportMapping, listDealFields, readPassportValues, type PassportValue } from "../../../shared/crm/passportFields";
 import { getFurnitureImageUrl, getFurnitureItem } from "../../../shared/domain/furniture";
 import { getCanvasObject, getFloorPlan, getObjectStandMeta, getStandSizeMeters } from "../../../shared/domain/project";
 import { buildSpecification, formatNumber } from "../../../shared/domain/specification";
@@ -35,6 +36,7 @@ export function StandPassport({ onClose }: Props) {
   const dealId = standMeta?.dealId ?? crm.dealId;
 
   const [deal, setDeal] = useState<DealSummary | null>(null);
+  const [values, setValues] = useState<PassportValue[]>([]);
   const [snapshot, setSnapshot] = useState<string | null>(null);
 
   // Снимок берётся с холста, поэтому делается один раз при открытии:
@@ -53,14 +55,24 @@ export function StandPassport({ onClose }: Props) {
     if (crm.provider !== "bitrix24" || !dealId) return;
 
     let cancelled = false;
-    void getDealSummary(dealId)
-      .then((summary) => {
-        if (!cancelled) setDeal(summary);
-      })
-      .catch((error: unknown) => {
-        console.warn("Не удалось получить данные сделки для паспорта.", error);
-      });
 
+    const load = async () => {
+      try {
+        const [summary, mapping, fields] = await Promise.all([
+          getDealSummary(dealId),
+          getPassportMapping(),
+          listDealFields(),
+        ]);
+        if (cancelled) return;
+
+        setDeal(summary);
+        setValues(readPassportValues(summary.raw, mapping, fields));
+      } catch (error) {
+        console.warn("Не удалось получить данные сделки для паспорта.", error);
+      }
+    };
+
+    void load();
     return () => {
       cancelled = true;
     };
@@ -107,6 +119,23 @@ export function StandPassport({ onClose }: Props) {
             <dd>{formatNumber(specification.perimeterM)} м</dd>
           </div>
         </dl>
+
+        {values.length > 0 ? (
+          <div className="passport__section">
+            <h3>FRAME BOARD // ФРИЗ И ОФОРМЛЕНИЕ</h3>
+            <dl className="passport__list">
+              {values.map((item) => (
+                <div key={item.slot.id}>
+                  <dt>{item.slot.title}</dt>
+                  <dd>
+                    {item.value}
+                    {item.slot.id === "friezeText" ? <span className="passport__hint"> — знаков: {item.value.length}</span> : null}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ) : null}
 
         {snapshot ? (
           <div className="passport__section">

@@ -11,6 +11,8 @@ export type DealSummary = {
   title: string;
   companyName: string | null;
   contactName: string | null;
+  /** Сделка целиком — из неё паспорт достаёт настроенные поля. */
+  raw: Record<string, unknown>;
 };
 
 export async function getDealSummary(dealId: string): Promise<DealSummary> {
@@ -28,6 +30,7 @@ export async function getDealSummary(dealId: string): Promise<DealSummary> {
     title: typeof deal.TITLE === "string" ? deal.TITLE : `Сделка ${dealId}`,
     companyName,
     contactName,
+    raw: deal,
   };
 }
 

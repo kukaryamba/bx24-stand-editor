@@ -737,6 +737,35 @@ p {
   color: #6b7280;
 }
 
+.passport__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.passport__list > div {
+  padding: 6px 0;
+  border-bottom: 1px solid #eaeef2;
+}
+
+.passport__list dt {
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.passport__list dd {
+  margin: 2px 0 0;
+  font-size: 15px;
+}
+
+.passport__hint {
+  color: #6b7280;
+  font-size: 12px;
+}
+
 .passport__plan {
   display: block;
   width: 100%;

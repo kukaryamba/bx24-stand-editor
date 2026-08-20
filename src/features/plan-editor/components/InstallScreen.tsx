@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { appHandlerUrl, bindDealTab, finishInstall } from "../../../shared/crm/bitrixApi";
 import { getAllowedCategory, listDealCategories, setAllowedCategory, type DealCategory } from "../../../shared/crm/dealCategory";
+import {
+  getPassportMapping,
+  listDealFields,
+  passportSlots,
+  setPassportMapping,
+  type DealField,
+  type PassportMapping,
+} from "../../../shared/crm/passportFields";
 
 /**
  * Установка приложения в портал.
@@ -88,6 +96,7 @@ export function InstallScreen({ onContinue }: InstallScreenProps) {
         ) : null}
 
         {state.kind === "done" ? <CategoryPicker /> : null}
+        {state.kind === "done" ? <PassportFieldsPicker /> : null}
 
         <dl className="install-card__facts">
           <div>
@@ -100,6 +109,93 @@ export function InstallScreen({ onContinue }: InstallScreenProps) {
           </div>
         </dl>
       </div>
+    </div>
+  );
+}
+
+type FieldsState =
+  | { kind: "loading" }
+  | { kind: "ready"; fields: DealField[]; mapping: PassportMapping; saved: boolean }
+  | { kind: "error"; text: string };
+
+/**
+ * Какое поле сделки отвечает за какую строку паспорта.
+ *
+ * В старом приложении номера полей были вписаны в код, и при переезде
+ * на другой портал это пришлось бы переписывать. Здесь соответствие
+ * выбирается один раз и живёт в настройках приложения.
+ */
+function PassportFieldsPicker() {
+  const [state, setState] = useState<FieldsState>({ kind: "loading" });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const [fields, mapping] = await Promise.all([listDealFields(), getPassportMapping()]);
+        if (cancelled) return;
+        setState({ kind: "ready", fields, mapping, saved: false });
+      } catch (error) {
+        if (cancelled) return;
+        setState({ kind: "error", text: error instanceof Error ? error.message : "Не удалось получить поля сделки." });
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const choose = async (slotId: string, code: string) => {
+    if (state.kind !== "ready") return;
+
+    const mapping = { ...state.mapping };
+    if (code) mapping[slotId] = code;
+    else delete mapping[slotId];
+
+    setState({ ...state, mapping, saved: false });
+
+    try {
+      await setPassportMapping(mapping);
+      setState((current) => (current.kind === "ready" ? { ...current, saved: true } : current));
+    } catch (error) {
+      setState({ kind: "error", text: error instanceof Error ? error.message : "Не удалось сохранить выбор полей." });
+    }
+  };
+
+  return (
+    <div className="install-card__section">
+      <h2>Поля паспорта</h2>
+
+      {state.kind === "loading" ? <p>Загружаю поля сделки...</p> : null}
+      {state.kind === "error" ? <p className="install-card__error">{state.text}</p> : null}
+
+      {state.kind === "ready" ? (
+        <>
+          <p>
+            Укажите, откуда паспорт берёт данные. Незаполненные строки в паспорт не попадают — пустое место в документе
+            для монтажников хуже, чем его отсутствие.
+          </p>
+
+          {passportSlots.map((slot) => (
+            <label key={slot.id}>
+              {slot.title}
+              <select value={state.mapping[slot.id] ?? ""} onChange={(event) => void choose(slot.id, event.target.value)}>
+                <option value="">Не показывать</option>
+                {state.fields.map((field) => (
+                  <option key={field.code} value={field.code}>
+                    {field.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+
+          {state.saved ? <p className="install-card__ok">Сохранено.</p> : null}
+        </>
+      ) : null}
     </div>
   );
 }
