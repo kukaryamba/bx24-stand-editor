@@ -61,7 +61,10 @@ type EditorState = {
   activeFloorPlanId: string | null;
   /** Стенд, площадка которого сейчас открыта. */
   activeStandObjectId: string | null;
+  /** Объект, чья карточка открыта справа. Пусто, если выбрано несколько. */
   selectedObjectId: string | null;
+  /** Всё выделенное: по нему работают групповые действия. */
+  selectedObjectIds: string[];
   draftPoints: Point[];
   mode: AppMode;
   tool: EditorTool;
@@ -80,7 +83,11 @@ type EditorState = {
   setCrmContext: (crm: CrmContext) => void;
   setMode: (mode: AppMode) => void;
   setTool: (tool: EditorTool) => void;
-  selectObject: (objectId: string | null) => void;
+  selectObject: (objectId: string | null, additive?: boolean) => void;
+  /** Выделяет сразу несколько — например, обведённых рамкой. */
+  selectObjects: (objectIds: string[]) => void;
+  /** Удаляет всё выделенное одним действием, чтобы отмена вернула разом. */
+  deleteObjects: (objectIds: string[]) => void;
   addDraftPoint: (point: Point) => void;
   clearDraft: () => void;
   createStandFromDraft: () => void;
@@ -121,6 +128,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   activeFloorPlanId: null,
   activeStandObjectId: null,
   selectedObjectId: null,
+  selectedObjectIds: [],
   draftPoints: [],
   mode: "admin",
   tool: "select",
@@ -145,6 +153,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       project,
       ...keepOpenPlan(project, get()),
       selectedObjectId: null,
+      selectedObjectIds: [],
       draftPoints: [],
       historyPast: [],
       historyFuture: [],
@@ -166,7 +175,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const restored = objects.map((object) => ({ ...object, floorPlanId: floorPlanId ?? object.floorPlanId }));
 
     commitProject(set, get, { ...project, objects: [...untouched, ...restored] });
-    set({ selectedObjectId: null, draftPoints: [], validationMessage: null });
+    set({ selectedObjectId: null, selectedObjectIds: [], draftPoints: [], validationMessage: null });
   },
   createSnapshot: () => {
     const project = get().project;
@@ -175,9 +184,42 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
   saveWorkspace: () => set({ isDirty: false }),
   setCrmContext: (crm) => set({ crm }),
-  setMode: (mode) => set({ mode, selectedObjectId: null, draftPoints: [], tool: mode === "manager" ? "select" : get().tool }),
+  setMode: (mode) => set({ mode, selectedObjectId: null, selectedObjectIds: [], draftPoints: [], tool: mode === "manager" ? "select" : get().tool }),
   setTool: (tool) => set({ tool, draftPoints: [], validationMessage: null }),
-  selectObject: (objectId) => set({ selectedObjectId: objectId, tool: "select", draftPoints: [] }),
+  /**
+   * Обычный клик выбирает один объект, клик с Ctrl добавляет или убирает
+   * из выделения. Карточка справа показывается, когда выбран ровно один:
+   * у нескольких объектов общих свойств нет.
+   */
+  selectObject: (objectId, additive = false) => {
+    if (!objectId) {
+      set({ selectedObjectId: null, selectedObjectIds: [], tool: "select", draftPoints: [] });
+      return;
+    }
+
+    if (!additive) {
+      set({ selectedObjectId: objectId, selectedObjectIds: [objectId], tool: "select", draftPoints: [] });
+      return;
+    }
+
+    const current = get().selectedObjectIds;
+    const next = current.includes(objectId) ? current.filter((id) => id !== objectId) : [...current, objectId];
+
+    set({
+      selectedObjectId: next.length === 1 ? next[0] : null,
+      selectedObjectIds: next,
+      tool: "select",
+      draftPoints: [],
+    });
+  },
+  selectObjects: (objectIds) => {
+    set({
+      selectedObjectId: objectIds.length === 1 ? objectIds[0] : null,
+      selectedObjectIds: objectIds,
+      tool: "select",
+      draftPoints: [],
+    });
+  },
   addDraftPoint: (point) => {
     const floorPlan = getFloorPlan(get().project, get().activeFloorPlanId);
     if (!floorPlan) return;
@@ -224,7 +266,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...project,
       objects: [...project.objects, object],
     });
-    set({ selectedObjectId: objectId, draftPoints: [], tool: "select", validationMessage: null });
+    set({ selectedObjectId: objectId, selectedObjectIds: [objectId], draftPoints: [], tool: "select", validationMessage: null });
   },
   updateStand: (objectId, patch) => {
     const state = get();
@@ -304,14 +346,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
   deleteObject: (objectId) => {
+    get().deleteObjects([objectId]);
+  },
+  deleteObjects: (objectIds) => {
     const project = get().project;
-    if (!project) return;
+    if (!project || objectIds.length === 0) return;
 
+    const removed = new Set(objectIds);
+
+    // Одним коммитом: иначе отмена возвращала бы предметы по одному.
     commitProject(set, get, {
       ...project,
-      objects: project.objects.filter((item) => item.id !== objectId),
+      objects: project.objects.filter((item) => !removed.has(item.id)),
     });
-    set({ selectedObjectId: null });
+    set({ selectedObjectId: null, selectedObjectIds: [] });
   },
   addFurniture: (itemId, position) => {
     const state = get();
@@ -342,7 +390,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     };
 
     commitProject(set, get, { ...project, objects: [...project.objects, object] });
-    set({ selectedObjectId: objectId, tool: "select" });
+    set({ selectedObjectId: objectId, selectedObjectIds: [objectId], tool: "select" });
   },
   moveFurniture: (objectId, origin) => {
     const project = get().project;
@@ -381,6 +429,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         set({
           activeFloorPlanId: expoPlan.id,
           selectedObjectId: null,
+      selectedObjectIds: [],
           draftPoints: [],
           validationMessage: null,
           viewport: fitViewport(project, expoPlan.id, state.stageSize),
@@ -426,6 +475,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         activeFloorPlanId: existing.id,
         activeStandObjectId: standObjectId,
         selectedObjectId: null,
+      selectedObjectIds: [],
         draftPoints: [],
         validationMessage: null,
         viewport: fitViewport(project, existing.id, get().stageSize),
@@ -461,6 +511,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       activeFloorPlanId: plan.id,
       activeStandObjectId: standObjectId,
       selectedObjectId: null,
+      selectedObjectIds: [],
       draftPoints: [],
       validationMessage: null,
       viewport: fitViewport(get().project, plan.id, get().stageSize),
@@ -474,6 +525,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({
       activeFloorPlanId: expoPlan.id,
       selectedObjectId: null,
+      selectedObjectIds: [],
       draftPoints: [],
       validationMessage: null,
       viewport: fitViewport(project, expoPlan.id, get().stageSize),
@@ -537,7 +589,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
 
     commitProject(set, get, { ...project, objects: [...kept, ...walls] });
-    set({ selectedObjectId: null, validationMessage: null });
+    set({ selectedObjectId: null, selectedObjectIds: [], validationMessage: null });
   },
   zoomIn: () => set(({ viewport }) => ({ viewport: { ...viewport, scale: Math.min(viewport.scale + 0.1, maxScale) } })),
   zoomOut: () => set(({ viewport }) => ({ viewport: { ...viewport, scale: Math.max(viewport.scale - 0.1, minScale) } })),
@@ -571,6 +623,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       validationMessage: null,
       draftPoints: [],
       selectedObjectId: null,
+      selectedObjectIds: [],
     });
   },
   redo: () => {
@@ -587,6 +640,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       validationMessage: null,
       draftPoints: [],
       selectedObjectId: null,
+      selectedObjectIds: [],
     });
   },
 }));

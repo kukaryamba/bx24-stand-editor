@@ -19,6 +19,9 @@ export function PlanCanvas() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
   const [middleButtonPanning, setMiddleButtonPanning] = useState(false);
+  const [marquee, setMarquee] = useState<{ start: Point; end: Point } | null>(null);
+  /** Тянули ли мышь: без этого одиночный клик сойдёт за пустую рамку. */
+  const marqueeMoved = useRef(false);
   // Размер холста живёт в store: по нему считается вписывание плана в экран.
   const stageSize = useEditorStore((state) => state.stageSize);
   const setStageSize = useEditorStore((state) => state.setStageSize);
@@ -33,6 +36,9 @@ export function PlanCanvas() {
   const addDraftPoint = useEditorStore((state) => state.addDraftPoint);
   const createStandFromDraft = useEditorStore((state) => state.createStandFromDraft);
   const selectObject = useEditorStore((state) => state.selectObject);
+  const selectObjects = useEditorStore((state) => state.selectObjects);
+  const deleteObjects = useEditorStore((state) => state.deleteObjects);
+  const selectedObjectIds = useEditorStore((state) => state.selectedObjectIds);
   const updateStand = useEditorStore((state) => state.updateStand);
   const moveFurniture = useEditorStore((state) => state.moveFurniture);
   const rotateFurniture = useEditorStore((state) => state.rotateFurniture);
@@ -83,6 +89,12 @@ export function PlanCanvas() {
         return;
       }
 
+      if (["Delete", "Backspace"].includes(event.key) && selectedObjectIds.length > 0) {
+        event.preventDefault();
+        deleteObjects(selectedObjectIds);
+        return;
+      }
+
       if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
 
       event.preventDefault();
@@ -100,7 +112,7 @@ export function PlanCanvas() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [redoAction, rotateFurniture, selectedObjectId, setViewport, undoAction, viewport.x, viewport.y]);
+  }, [deleteObjects, redoAction, rotateFurniture, selectedObjectId, selectedObjectIds, setViewport, undoAction, viewport.x, viewport.y]);
 
   useEffect(() => {
     if (!middleButtonPanning) return;
@@ -132,6 +144,14 @@ export function PlanCanvas() {
   const gridOffset: Point = { x: floorPlan.grid.offsetX ?? 0, y: floorPlan.grid.offsetY ?? 0 };
   const gridLines = floorPlan.grid.enabled ? createGridLines(floorPlan.width, floorPlan.height, floorPlan.grid.cellSizePx, gridOffset) : [];
 
+  /** Точка под курсором в координатах плана, без привязки к сетке. */
+  const planPoint = (stage: Konva.Stage): Point | null => {
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return null;
+
+    return { x: (pointer.x - viewport.x) / viewport.scale, y: (pointer.y - viewport.y) / viewport.scale };
+  };
+
   const getPointer = (stage: Konva.Stage): Point | null => {
     const pointer = stage.getPointerPosition();
     if (!pointer) return null;
@@ -142,6 +162,14 @@ export function PlanCanvas() {
   const handleStageClick = (event: Konva.KonvaEventObject<MouseEvent>) => {
     // Средней и правой кнопкой вершины не ставим.
     if (event.evt.button !== 0) return;
+
+    // Клик по пустому месту снимает выделение — но только если это клик,
+    // а не окончание рамки: иначе рамка сама себя и сбросит.
+    if (tool === "select" && event.target === event.target.getStage() && !marqueeMoved.current) {
+      selectObject(null);
+      return;
+    }
+
     if (tool !== "polygon") return;
     const stage = event.target.getStage();
     if (!stage) return;
@@ -201,6 +229,16 @@ export function PlanCanvas() {
    * Работает при любом выбранном инструменте, не сбивая текущий режим.
    */
   const handleStageMouseDown = (event: Konva.KonvaEventObject<MouseEvent>) => {
+    // Рамка выделения: тянем инструментом «Выбор» по пустому месту.
+    if (event.evt.button === 0 && tool === "select" && event.target === event.target.getStage()) {
+      const stage = event.target.getStage();
+      const start = stage ? planPoint(stage) : null;
+      if (start) {
+        marqueeMoved.current = false;
+        setMarquee({ start, end: start });
+      }
+    }
+
     if (event.evt.button !== middleMouseButton) return;
 
     // Иначе браузер включит свой режим автопрокрутки.
@@ -213,7 +251,27 @@ export function PlanCanvas() {
     stage.startDrag();
   };
 
+  const handleStageMouseMove = (event: Konva.KonvaEventObject<MouseEvent>) => {
+    if (!marquee) return;
+
+    const stage = event.target.getStage();
+    const point = stage ? planPoint(stage) : null;
+    if (!point) return;
+
+    marqueeMoved.current = true;
+    setMarquee({ start: marquee.start, end: point });
+  };
+
   const handleStageMouseUp = (event: Konva.KonvaEventObject<MouseEvent>) => {
+    if (marquee) {
+      const box = marqueeBox(marquee);
+      // Совсем маленькая рамка — это промах мышью, а не выделение.
+      if (marqueeMoved.current && box.width > 3 && box.height > 3) {
+        selectObjects(visibleObjects.filter((object) => intersectsBox(object, box)).map((object) => object.id));
+      }
+      setMarquee(null);
+    }
+
     if (event.evt.button !== middleMouseButton || !middleButtonPanning) return;
 
     const stage = event.target.getStage();
@@ -251,6 +309,7 @@ export function PlanCanvas() {
         onWheel={handleWheel}
         draggable={tool === "pan" || middleButtonPanning}
         onMouseDown={handleStageMouseDown}
+        onMouseMove={handleStageMouseMove}
         onMouseUp={handleStageMouseUp}
         onDragEnd={(event) => {
           // Событие всплывает от перетащенного стенда или предмета, поэтому
@@ -274,12 +333,12 @@ export function PlanCanvas() {
             <StandShape
               key={object.id}
               object={object}
-              selected={object.id === selectedObjectId}
+              selected={selectedObjectIds.includes(object.id)}
               currentDeal={Boolean(crm.dealId && getObjectStandMeta(object)?.dealId === crm.dealId)}
               cellSizePx={floorPlan.grid.cellSizePx}
               metersPerCell={floorPlan.grid.metersPerCell}
               draggable={mode === "admin"}
-              onSelect={() => selectObject(object.id)}
+              onSelect={(additive) => selectObject(object.id, additive)}
               onOpen={() => openStandPlan(object.id)}
               onDragEnd={(event) => handleObjectDragEnd(object, event)}
             />
@@ -289,8 +348,8 @@ export function PlanCanvas() {
             <FurnitureShape
               key={object.id}
               object={object}
-              selected={object.id === selectedObjectId}
-              onSelect={() => selectObject(object.id)}
+              selected={selectedObjectIds.includes(object.id)}
+              onSelect={(additive) => selectObject(object.id, additive)}
               onDragEnd={(event) => handleFurnitureDragEnd(object, event)}
             />
           ))}
@@ -310,6 +369,16 @@ export function PlanCanvas() {
                 />
               ))
             : null}
+
+          {marquee ? (
+            <Rect
+              {...marqueeBox(marquee)}
+              fill="rgba(26, 115, 232, 0.12)"
+              stroke="#1a73e8"
+              strokeWidth={1 / viewport.scale}
+              listening={false}
+            />
+          ) : null}
 
           {draftPoints.length > 0 ? (
             <Group listening={false}>
@@ -332,7 +401,7 @@ type StandShapeProps = {
   draggable: boolean;
   cellSizePx: number;
   metersPerCell: number;
-  onSelect: () => void;
+  onSelect: (additive: boolean) => void;
   onOpen: () => void;
   onDragEnd: (event: Konva.KonvaEventObject<DragEvent>) => void;
 };
@@ -345,7 +414,14 @@ function StandShape({ object, selected, currentDeal, draggable, cellSizePx, mete
   const fill = currentDeal ? currentDealColor : statusColors[standMeta?.status ?? "available"];
 
   return (
-    <Group draggable={draggable} onClick={onSelect} onTap={onSelect} onDblClick={onOpen} onDblTap={onOpen} onDragEnd={onDragEnd}>
+    <Group
+      draggable={draggable}
+      onClick={(event) => onSelect(event.evt.ctrlKey || event.evt.metaKey)}
+      onTap={() => onSelect(false)}
+      onDblClick={onOpen}
+      onDblTap={onOpen}
+      onDragEnd={onDragEnd}
+    >
       <Line
         points={flattenPoints(points)}
         closed
@@ -375,7 +451,7 @@ function StandShape({ object, selected, currentDeal, draggable, cellSizePx, mete
 type FurnitureShapeProps = {
   object: CanvasObject;
   selected: boolean;
-  onSelect: () => void;
+  onSelect: (additive: boolean) => void;
   onDragEnd: (event: Konva.KonvaEventObject<DragEvent>) => void;
 };
 
@@ -395,7 +471,14 @@ function FurnitureShape({ object, selected, onSelect, onDragEnd }: FurnitureShap
   const shift = imageShift(meta.rotation, width, height);
 
   return (
-    <Group x={origin.x} y={origin.y} draggable onClick={onSelect} onTap={onSelect} onDragEnd={onDragEnd}>
+    <Group
+      x={origin.x}
+      y={origin.y}
+      draggable
+      onClick={(event) => onSelect(event.evt.ctrlKey || event.evt.metaKey)}
+      onTap={() => onSelect(false)}
+      onDragEnd={onDragEnd}
+    >
       <Rect
         width={boxWidth}
         height={boxHeight}
@@ -434,6 +517,30 @@ function imageShift(rotation: number, width: number, height: number): Point {
     default:
       return { x: 0, y: 0 };
   }
+}
+
+/** Прямоугольник рамки: тянуть можно в любую сторону, ширина не бывает отрицательной. */
+function marqueeBox(marquee: { start: Point; end: Point }) {
+  return {
+    x: Math.min(marquee.start.x, marquee.end.x),
+    y: Math.min(marquee.start.y, marquee.end.y),
+    width: Math.abs(marquee.end.x - marquee.start.x),
+    height: Math.abs(marquee.end.y - marquee.start.y),
+  };
+}
+
+/** Попал ли объект в рамку — достаточно пересечения, целиком накрывать не нужно. */
+function intersectsBox(object: CanvasObject, box: { x: number; y: number; width: number; height: number }): boolean {
+  const points = getObjectPoints(object);
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+
+  return (
+    Math.min(...xs) <= box.x + box.width &&
+    Math.max(...xs) >= box.x &&
+    Math.min(...ys) <= box.y + box.height &&
+    Math.max(...ys) >= box.y
+  );
 }
 
 function createGridLines(width: number, height: number, gridSize: number, offset: Point) {

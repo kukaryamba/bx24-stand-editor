@@ -10,6 +10,8 @@ export function PropertiesPanel() {
   const project = useEditorStore((state) => state.project);
   const activeFloorPlanId = useEditorStore((state) => state.activeFloorPlanId);
   const selectedObjectId = useEditorStore((state) => state.selectedObjectId);
+  const selectedObjectIds = useEditorStore((state) => state.selectedObjectIds);
+  const deleteObjects = useEditorStore((state) => state.deleteObjects);
   const crm = useEditorStore((state) => state.crm);
   const validationMessage = useEditorStore((state) => state.validationMessage);
   const isDirty = useEditorStore((state) => state.isDirty);
@@ -33,6 +35,18 @@ export function PropertiesPanel() {
       </div>
 
       {validationMessage ? <div className="validation-message">{validationMessage}</div> : null}
+
+      {selectedObjectIds.length > 1 ? (
+        <div className="property-form">
+          <h2>Выбрано объектов: {selectedObjectIds.length}</h2>
+          <p>Общих свойств у разных объектов нет, но удалить их можно разом — одной отменой всё вернётся.</p>
+
+          <button className="danger-action" onClick={() => deleteObjects(selectedObjectIds)}>
+            <Trash2 size={16} aria-hidden />
+            Удалить выбранные ({selectedObjectIds.length})
+          </button>
+        </div>
+      ) : null}
 
       {object && furniture && furnitureItem ? (
         <div className="property-form">
@@ -68,7 +82,7 @@ export function PropertiesPanel() {
             Удалить предмет
           </button>
         </div>
-      ) : !stand || !object ? (
+      ) : selectedObjectIds.length > 1 ? null : !stand || !object ? (
         <div className="empty-panel">
           <h2>Объект не выбран</h2>
           <p>Выберите объект на плане или создайте новый стенд. Архитектура уже готова для колонн, проходов и других типов объектов.</p>
