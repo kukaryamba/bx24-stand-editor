@@ -49,10 +49,6 @@ export function PropertiesPanel() {
         </div>
       ) : null}
 
-      {/* Анкета показывается на площадке стенда: она про стенд целиком,
-          а не про выделенный предмет. */}
-      {plan?.kind === "stand" && plan.standObjectId ? <PassportForm standObjectId={plan.standObjectId} /> : null}
-
       {object && furniture && furnitureItem ? (
         <div className="property-form">
           <h2>Предмет</h2>
@@ -154,6 +150,13 @@ export function PropertiesPanel() {
           </button>
         </div>
       )}
+
+      {/*
+        Анкета идёт последней: она про стенд целиком и заполняется один раз,
+        а карточка выбранного предмета нужна постоянно и должна быть на виду,
+        без прокрутки.
+      */}
+      {plan?.kind === "stand" && plan.standObjectId ? <PassportForm standObjectId={plan.standObjectId} /> : null}
     </aside>
   );
 }
