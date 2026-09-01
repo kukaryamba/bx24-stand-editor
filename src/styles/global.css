@@ -821,14 +821,18 @@ p {
 
 .install-screen {
   display: grid;
-  place-items: center;
+  place-items: start center;
   min-height: 100%;
-  padding: 32px;
+  padding: 32px 24px;
+  overflow: auto;
   background: #f9fafb;
 }
 
 .install-card {
+  width: min(560px, 100%);
   max-width: 560px;
+  /* Ничто внутри не должно распирать карточку за край окна. */
+  overflow-wrap: anywhere;
   padding: 28px;
   border: 1px solid #d9dee7;
   border-radius: 10px;
@@ -872,18 +876,28 @@ p {
 .install-card__section label {
   display: grid;
   gap: 6px;
+  /* Иначе элемент сетки раздувается под самый длинный пункт списка. */
+  min-width: 0;
   margin-bottom: 10px;
   font-size: 13px;
   color: #6b7280;
 }
 
 .install-card__section select {
+  /*
+   * Названия полей сделки бывают в полстроки, и список тянул карточку
+   * за край экрана. Ширину задаём мы, а длинный текст пусть обрезается.
+   */
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 8px 10px;
   border: 1px solid #cbd2dc;
   border-radius: 6px;
   background: #ffffff;
   color: #1f2937;
   font-size: 14px;
+  text-overflow: ellipsis;
 }
 
 .install-card__facts {
