@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getDealSummary, type DealSummary } from "../../../shared/crm/dealInfo";
-import { getPassportMapping, listDealFields, readPassportValues, type PassportValue } from "../../../shared/crm/passportFields";
+import { readPassportValues } from "../../../shared/crm/passportFields";
 import { getFurnitureImageUrl, getFurnitureItem } from "../../../shared/domain/furniture";
 import { getCanvasObject, getFloorPlan, getObjectStandMeta, getStandSizeMeters } from "../../../shared/domain/project";
 import { buildSpecification, formatNumber } from "../../../shared/domain/specification";
@@ -36,7 +36,7 @@ export function StandPassport({ onClose }: Props) {
   const dealId = standMeta?.dealId ?? crm.dealId;
 
   const [deal, setDeal] = useState<DealSummary | null>(null);
-  const [values, setValues] = useState<PassportValue[]>([]);
+  const values = useMemo(() => readPassportValues(standMeta?.passport), [standMeta]);
   const [snapshot, setSnapshot] = useState<string | null>(null);
 
   // Снимок берётся с холста, поэтому делается один раз при открытии:
@@ -56,23 +56,13 @@ export function StandPassport({ onClose }: Props) {
 
     let cancelled = false;
 
-    const load = async () => {
-      try {
-        const [summary, mapping, fields] = await Promise.all([
-          getDealSummary(dealId),
-          getPassportMapping(),
-          listDealFields(),
-        ]);
-        if (cancelled) return;
-
-        setDeal(summary);
-        setValues(readPassportValues(summary.raw, mapping, fields));
-      } catch (error) {
+    void getDealSummary(dealId)
+      .then((summary) => {
+        if (!cancelled) setDeal(summary);
+      })
+      .catch((error: unknown) => {
         console.warn("Не удалось получить данные сделки для паспорта.", error);
-      }
-    };
-
-    void load();
+      });
     return () => {
       cancelled = true;
     };

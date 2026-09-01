@@ -157,6 +157,11 @@ export type StandObjectMeta = {
   status: StandStatus;
   dealId: string | null;
   note: string;
+  /**
+   * Ответы анкеты паспорта: фриз, цвета, самозастройка, диплом.
+   * Ключи — идентификаторы строк из passportSlots.
+   */
+  passport?: Record<string, string>;
 };
 
 /** Предмет, поставленный на план стенда. */

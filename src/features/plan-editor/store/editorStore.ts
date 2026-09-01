@@ -91,7 +91,18 @@ type EditorState = {
   addDraftPoint: (point: Point) => void;
   clearDraft: () => void;
   createStandFromDraft: () => void;
-  updateStand: (objectId: string, patch: { number?: string; status?: StandStatus; dealId?: string | null; note?: string; points?: Point[] }) => void;
+  updateStand: (
+    objectId: string,
+    patch: {
+      number?: string;
+      status?: StandStatus;
+      dealId?: string | null;
+      note?: string;
+      points?: Point[];
+      /** Ответы анкеты паспорта — дописываются к прежним, а не заменяют их. */
+      passport?: Record<string, string>;
+    },
+  ) => void;
   updateFloorPlanGrid: (floorPlanId: string, patch: Partial<FloorPlan["grid"]>) => void;
   setFloorPlanBackground: (floorPlanId: string, background: FloorPlan["background"], size?: Pick<FloorPlan, "width" | "height">) => void;
   deleteObject: (objectId: string) => void;
@@ -306,6 +317,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
               status: patch.status ?? standMeta.status,
               dealId: patch.dealId === undefined ? standMeta.dealId : patch.dealId,
               note: patch.note ?? standMeta.note,
+              passport: patch.passport ? { ...standMeta.passport, ...patch.passport } : standMeta.passport,
             }
           : undefined,
       },

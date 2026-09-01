@@ -5,6 +5,7 @@ import { getCanvasObject, getFloorPlan, getObjectFurnitureMeta, getObjectPoints,
 import { statusLabels } from "../../../shared/domain/status";
 import { polygonArea } from "../../../shared/geometry/polygon";
 import { standStatuses, useEditorStore } from "../store/editorStore";
+import { PassportForm } from "./PassportForm";
 
 export function PropertiesPanel() {
   const project = useEditorStore((state) => state.project);
@@ -47,6 +48,10 @@ export function PropertiesPanel() {
           </button>
         </div>
       ) : null}
+
+      {/* Анкета показывается на площадке стенда: она про стенд целиком,
+          а не про выделенный предмет. */}
+      {plan?.kind === "stand" && plan.standObjectId ? <PassportForm standObjectId={plan.standObjectId} /> : null}
 
       {object && furniture && furnitureItem ? (
         <div className="property-form">
