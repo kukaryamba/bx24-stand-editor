@@ -1,0 +1,66 @@
+# Выкладка приложения на хостинг Таймвеб.
+#
+# После каждого пуша в main GitHub собирает приложение и заливает готовые
+# файлы по SSH. Адрес приложения при этом не меняется, поэтому вкладку
+# в карточке сделки перепривязывать не нужно.
+name: Выкладка на Таймвеб
+
+on:
+  push:
+    branches: [main]
+  # Позволяет выложить вручную, не делая пустой коммит.
+  workflow_dispatch:
+
+env:
+  # Каталог сайта на хостинге. Заканчивается косой чертой: rsync копирует
+  # содержимое, а не саму папку.
+  TARGET_DIR: /home/a/alitmix/stand-editor/public_html/
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Установка зависимостей
+        run: npm ci
+
+      - name: Сборка
+        run: npm run build
+
+      - name: Точка входа под POST
+        # Битрикс24 открывает приложение POST-запросом, а nginx отдаёт статику
+        # только на GET и отвечает 405. PHP принимает любой метод, поэтому
+        # входная страница переименовывается. Кода внутри нет, это тот же HTML.
+        run: mv dist/index.html dist/index.php
+
+      - name: Ключ доступа
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.TIMEWEB_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          # Отпечаток сервера сохраняем заранее: без него ssh спросит
+          # подтверждение и выкладка зависнет.
+          ssh-keyscan -H "${{ secrets.TIMEWEB_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Заливка
+        # --delete убирает с хостинга то, чего больше нет в сборке: иначе
+        # старые файлы каталога копятся годами.
+        run: |
+          rsync -rlz --delete --checksum \
+            -e "ssh -i ~/.ssh/id_ed25519" \
+            dist/ "${{ secrets.TIMEWEB_USER }}@${{ secrets.TIMEWEB_HOST }}:${{ env.TARGET_DIR }}"
+
+      - name: Проверка, что портал сможет открыть приложение
+        # Битрикс24 обращается POST-запросом. Если ответ не 200, вкладка
+        # в сделке покажет ошибку — лучше узнать об этом здесь.
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.APP_URL }}")
+          echo "POST -> $code"
+          test "$code" = "200"
