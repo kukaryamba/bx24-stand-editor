@@ -14,7 +14,7 @@ on:
 env:
   # Каталог сайта на хостинге. Заканчивается косой чертой: rsync копирует
   # содержимое, а не саму папку.
-  TARGET_DIR: /home/a/alitmix/stand-editor/public_html/
+  TARGET_DIR: /home/a/alitmix/public_html/stand-editor/
 
 jobs:
   deploy:
