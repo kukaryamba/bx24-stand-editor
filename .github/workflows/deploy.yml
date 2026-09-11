@@ -1,23 +1,23 @@
-# Выкладка приложения на хостинг Таймвеб.
+# Сборка приложения для хостинга Таймвеб.
 #
-# После каждого пуша в main GitHub собирает приложение и заливает готовые
-# файлы по SSH. Адрес приложения при этом не меняется, поэтому вкладку
-# в карточке сделки перепривязывать не нужно.
-name: Выкладка на Таймвеб
+# Раньше GitHub сам заливал файлы на хостинг по SSH, но хостинг не принимает
+# SSH-подключения с серверов GitHub: заливка падала по таймауту. Поэтому
+# направление обратное — GitHub кладёт готовую сборку в ветку deploy,
+# а хостинг раз в несколько минут сам забирает её скриптом
+# deploy/timeweb-pull.sh. Исходящие соединения с хостинга до GitHub работают.
+name: Сборка для Таймвеба
 
 on:
   push:
     branches: [main]
-  # Позволяет выложить вручную, не делая пустой коммит.
   workflow_dispatch:
 
-env:
-  # Каталог сайта на хостинге. Заканчивается косой чертой: rsync копирует
-  # содержимое, а не саму папку.
-  TARGET_DIR: /home/a/alitmix/public_html/stand-editor/
+# Нужно, чтобы записать собранные файлы в ветку deploy.
+permissions:
+  contents: write
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -40,55 +40,15 @@ jobs:
         # входная страница переименовывается. Кода внутри нет, это тот же HTML.
         run: mv dist/index.html dist/index.php
 
-      - name: Ключ доступа
+      - name: Сборка в ветку deploy
+        # В ветке только готовые файлы и ничего больше: хостинг забирает её
+        # целиком. История не нужна — каждый раз ветка пишется заново.
         run: |
-          install -m 700 -d ~/.ssh
-          echo "${{ secrets.TIMEWEB_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          # Отпечаток сервера записан здесь, а не запрашивается по сети:
-          # ssh-keyscan иногда не дожидается ответа, и выкладка падала на ровном
-          # месте. Заодно это защита — подменённый сервер ключ не примет.
-          # Отпечаток публичный, секретом не является.
-          cat >> ~/.ssh/known_hosts <<'EOF'
-          vh410.timeweb.ru ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGeu4tBLCAo4QotWYAdt51FP6166yu4vhWvJhRRgB4ZQ
-          vh410.timeweb.ru ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBMp8wu5PIHaj/cAmW2BeHeGtxQY873ueqbVAJu0t0IlrTT0OfCl0hP/kUDVK3MBfvwZUcTqRA+vScStxhUtjP5Y=
-          EOF
-
-      - name: Заливка
-        # --delete убирает с хостинга то, чего больше нет в сборке: иначе
-        # старые файлы каталога копятся годами.
-        # Соединение между серверами GitHub и хостингом иногда рвётся — так
-        # упали две выкладки из шести, обе на сетевых шагах, без изменений
-        # в файлах. Поэтому пять попыток с нарастающей паузой: короткий сбой
-        # переждать, а не заставлять человека перезапускать выкладку.
-        #
-        # Только IPv4 (-4): у сервера хостинга есть и IPv6-адрес, а у серверов
-        # GitHub IPv6-связи нет. Заливка падала с «Network is unreachable».
-        #
-        # Текст ошибки выносится в аннотацию: подробный лог GitHub показывает
-        # только администратору репозитория, а аннотации видны всем. Без этого
-        # причину сбоя приходилось угадывать.
-        run: |
-          for attempt in 1 2 3 4 5; do
-            rsync -rlz --delete --checksum --verbose --timeout=120 \
-              -e "ssh -4 -i ~/.ssh/id_ed25519 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4" \
-              dist/ "${{ secrets.TIMEWEB_USER }}@${{ secrets.TIMEWEB_HOST }}:${{ env.TARGET_DIR }}" > rsync.log 2>&1 && code=0 || code=$?
-            cat rsync.log
-            if [ "$code" -eq 0 ]; then
-              exit 0
-            fi
-            # Аннотация однострочная, поэтому переводы строк заменяем.
-            reason=$(grep -v '^$' rsync.log | tail -n 6 | tr '\n' ' ' | cut -c1-900)
-            pause=$((attempt * 15))
-            echo "::warning title=Заливка, попытка $attempt, код rsync $code::$reason"
-            sleep $pause
-          done
-          exit 1
-
-      - name: Проверка, что портал сможет открыть приложение
-        # Битрикс24 обращается POST-запросом. Если ответ не 200, вкладка
-        # в сделке покажет ошибку — лучше узнать об этом здесь.
-        run: |
-          code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.APP_URL }}")
-          echo "POST -> $code"
-          test "$code" = "200"
+          cd dist
+          git init --quiet
+          git checkout --quiet -b deploy
+          git add --all
+          git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" \
+            commit --quiet -m "Сборка ${GITHUB_SHA::7}"
+          git push --quiet --force \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" deploy
