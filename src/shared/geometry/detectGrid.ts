@@ -20,7 +20,27 @@ export type GridDetection = {
   offsetY: number;
   /** Насколько уверенно нашлась периодичность, от 0 до 1. */
   confidence: number;
+  /**
+   * Где на картинке сам чертёж, в пикселях исходной картинки. Края лежат
+   * на узлах сетки. Пусто, если обрезать нечего или границы не нашлись.
+   */
+  frame: PlanFrame | null;
 };
+
+export type PlanFrame = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+/** Запас вокруг сетки: стены, стрелки и подписи часто выходят за её край. */
+const frameMarginCells = 2;
+/**
+ * Обрезаем, только если это заметно уменьшает картинку. Иначе ради пары
+ * пикселей пережимали бы и так аккуратный план.
+ */
+const minCroppedShare = 0.05;
 
 /** Больше этого размера картинку уменьшаем: точности хватает, а считается быстрее. */
 const maxAnalyzedSize = 2000;
@@ -57,6 +77,24 @@ export function detectGridStep(image: HTMLImageElement): GridDetection | null {
     return null;
   }
 
+  return detectGridFromPixels(pixels, canvasWidth, canvasHeight, scale, width, height);
+}
+
+/**
+ * Сам расчёт — по готовым пикселям, без браузера. Отделён, чтобы его можно
+ * было прогнать на настоящих планах и убедиться, что обрезка не промахивается.
+ *
+ * pixels — RGBA уменьшенной картинки, scale — во сколько раз её уменьшили,
+ * width и height — размеры исходной.
+ */
+export function detectGridFromPixels(
+  pixels: Uint8ClampedArray | Uint8Array,
+  canvasWidth: number,
+  canvasHeight: number,
+  scale: number,
+  width: number,
+  height: number,
+): GridDetection | null {
   const columns = new Float64Array(canvasWidth);
   const rows = new Float64Array(canvasHeight);
 
@@ -76,14 +114,196 @@ export function detectGridStep(image: HTMLImageElement): GridDetection | null {
   const best = pickBest(byColumns, byRows);
   if (!best) return null;
 
-  // Шага мало: если начало сетки не совпадает с краем картинки, линии
-  // приложения пройдут между линиями чертежа. Поэтому ищем ещё и фазу.
+  // Грубый шаг уточняем спектрально — сразу по обеим осям, — а из того же
+  // расчёта берём фазу. Шапка, подписи и стрелки не периодичны и почти
+  // не влияют, а шаг выходит точным до сотых: без этого граница сетки
+  // теряется уже через два десятка клеток.
+  const period = refinePeriod(columns, rows, best.period);
+  const phaseX = spectralPhase(columns, period);
+  const phaseY = spectralPhase(rows, period);
+
+  const spanX = gridSpan(columns, canvasHeight, period, phaseX);
+  const spanY = gridSpan(rows, canvasWidth, period, phaseY);
+
+  let frame: PlanFrame | null = null;
+  if (spanX && spanY) {
+    const margin = frameMarginCells * period;
+
+    // Край среза ставим на узел сетки, отступив от крайней линии на целое
+    // число клеток, — тогда после обрезки сетка ложится с нулевым сдвигом.
+    const nodeAtOrBefore = (value: number, phase: number) => phase + Math.floor((value - phase) / period) * period;
+    const left = Math.max(nodeAtOrBefore(spanX.first - margin, phaseX), phaseX);
+    const top = Math.max(nodeAtOrBefore(spanY.first - margin, phaseY), phaseY);
+    const right = Math.min(spanX.last + margin, canvasWidth);
+    const bottom = Math.min(spanY.last + margin, canvasHeight);
+
+    const candidate = {
+      x: Math.round(left / scale),
+      y: Math.round(top / scale),
+      width: Math.round((right - left) / scale),
+      height: Math.round((bottom - top) / scale),
+    };
+
+    const croppedShare = 1 - (candidate.width * candidate.height) / (width * height);
+    if (candidate.width > 0 && candidate.height > 0 && croppedShare >= minCroppedShare) {
+      frame = candidate;
+    }
+  }
+
   return {
-    cellSizePx: round2(best.period / scale),
-    offsetX: round2(phaseOf(columns, best.period) / scale),
-    offsetY: round2(phaseOf(rows, best.period) / scale),
+    cellSizePx: round2(period / scale),
+    offsetX: round2(phaseX / scale),
+    offsetY: round2(phaseY / scale),
     confidence: round2(best.confidence),
+    frame,
   };
+}
+
+/**
+ * Где на оси начинается и кончается сетка чертежа.
+ *
+ * Проверяем места, где по шагу и фазе должна идти линия. Линия — это не
+ * просто тёмная полоса: посередине между линиями должно быть светло. Иначе
+ * крупные буквы в шапке плана, тёмные сплошняком, сошли бы за сетку.
+ *
+ * Отдельные пропуски допустимы — линию может перекрыть стенд или подпись.
+ * Берётся самый длинный непрерывный участок.
+ *
+ * Шагаем строго по расчётным местам, не подтягиваясь к найденной линии:
+ * у толстой стены подтягивание цепляется за стену и сбивается с шага.
+ * Это возможно только потому, что шаг уже уточнён до сотых.
+ */
+type GridSpan = {
+  first: number;
+  last: number;
+};
+
+function gridSpan(profile: Float64Array, crossSize: number, period: number, phase: number): GridSpan | null {
+  const threshold = crossSize * 0.04;
+  // Пустые места бывают широкими: конференц-зал на плане ЦБСС — два десятка
+  // клеток, где сетка идёт только выше и ниже. Поэтому пропусков допускаем много.
+  const allowedGaps = 6;
+
+  let best: GridSpan | null = null;
+  let runFirst: number | null = null;
+  let runLast = 0;
+  let gaps = 0;
+
+  const closeRun = () => {
+    if (runFirst === null) return;
+    if (!best || runLast - runFirst > best.last - best.first) best = { first: runFirst, last: runLast };
+    runFirst = null;
+  };
+
+  let position = phase;
+  while (position < profile.length) {
+    const index = localMaxIndex(profile, position, period * 0.25);
+    const isLine = profile[index] - betweenAt(profile, index, period) >= threshold;
+
+    if (isLine) {
+      if (runFirst === null) runFirst = index;
+      runLast = index;
+      gaps = 0;
+      position += period;
+    } else {
+      if (runFirst !== null) {
+        gaps += 1;
+        if (gaps > allowedGaps) {
+          closeRun();
+          gaps = 0;
+        }
+      }
+      position += period;
+    }
+  }
+  closeRun();
+
+  // Пара совпадений — это ещё не сетка.
+  const found = best as GridSpan | null;
+  if (!found || found.last - found.first < period * 4) return null;
+  return found;
+}
+
+/** Насколько шире грубой оценки искать точный шаг — в обе стороны. */
+const refineRange = 0.04;
+const refineSteps = 400;
+
+/**
+ * Точный шаг: при каком периоде картинка «звучит» сильнее всего.
+ *
+ * Для каждого близкого шага считаем, насколько профиль совпадает с гребёнкой
+ * этого шага (амплитуда преобразования Фурье на его частоте). Линии сетки
+ * складываются в фазе, а шапка и подписи — вразнобой и гасят друг друга.
+ * Диапазон узкий, ±4%, поэтому половинный и двойной шаг сюда не попадают —
+ * их отсеял выбор кандидатов по контрасту.
+ */
+function refinePeriod(columns: Float64Array, rows: Float64Array, approximate: number): number {
+  const centeredColumns = center(columns);
+  const centeredRows = center(rows);
+
+  let bestPeriod = approximate;
+  let bestPower = -1;
+  for (let step = -refineSteps; step <= refineSteps; step += 1) {
+    const period = approximate * (1 + (step / refineSteps) * refineRange);
+    const power = spectrumPower(centeredColumns, period) + spectrumPower(centeredRows, period);
+    if (power > bestPower) {
+      bestPower = power;
+      bestPeriod = period;
+    }
+  }
+
+  return bestPeriod;
+}
+
+function spectrum(centered: Float64Array, period: number): { re: number; im: number } {
+  const omega = (2 * Math.PI) / period;
+  let re = 0;
+  let im = 0;
+  for (let x = 0; x < centered.length; x += 1) {
+    re += centered[x] * Math.cos(omega * x);
+    im -= centered[x] * Math.sin(omega * x);
+  }
+  return { re, im };
+}
+
+function spectrumPower(centered: Float64Array, period: number): number {
+  const { re, im } = spectrum(centered, period);
+  // Нормируем на длину оси: иначе длинная ось перевешивала бы короткую.
+  return (re * re + im * im) / (centered.length * centered.length);
+}
+
+/**
+ * Где проходит первая линия, по фазе того же преобразования.
+ *
+ * Если линии стоят в точках φ + k·шаг, их вклады складываются в число
+ * с углом −2π·φ/шаг — по этому углу φ и восстанавливается.
+ */
+function spectralPhase(profile: Float64Array, period: number): number {
+  const { re, im } = spectrum(center(profile), period);
+  const phase = (-Math.atan2(im, re) / (2 * Math.PI)) * period;
+  return ((phase % period) + period) % period;
+}
+
+/**
+ * Вырезает чертёж из картинки плана.
+ *
+ * Сохраняем в JPEG: план хранится в браузере текстом, и PNG на несколько
+ * тысяч пикселей легко переполнил бы хранилище. Фон заливаем белым — у PNG
+ * с прозрачностью иначе вышел бы чёрный.
+ */
+export function cropImage(image: HTMLImageElement, frame: PlanFrame): string {
+  const canvas = document.createElement("canvas");
+  canvas.width = frame.width;
+  canvas.height = frame.height;
+
+  const context = canvas.getContext("2d");
+  if (!context) return image.src;
+
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, frame.width, frame.height);
+  context.drawImage(image, frame.x, frame.y, frame.width, frame.height, 0, 0, frame.width, frame.height);
+
+  return canvas.toDataURL("image/jpeg", 0.92);
 }
 
 /**
@@ -111,10 +331,12 @@ function phaseOf(profile: Float64Array, period: number): number {
 type Period = {
   period: number;
   confidence: number;
+  /** Насколько чётко линии отличаются от середины клеток — судья между осями. */
+  contrast: number;
 };
 
 /**
- * Из двух осей берём ту, где периодичность выражена чётче.
+ * Из двух осей берём ту, где сетка выражена чётче.
  * Если оси согласны между собой, шаг усредняем — так точнее.
  */
 function pickBest(first: Period | null, second: Period | null): Period | null {
@@ -126,10 +348,11 @@ function pickBest(first: Period | null, second: Period | null): Period | null {
     return {
       period: (first.period + second.period) / 2,
       confidence: Math.max(first.confidence, second.confidence),
+      contrast: Math.max(first.contrast, second.contrast),
     };
   }
 
-  return first.confidence >= second.confidence ? first : second;
+  return first.contrast >= second.contrast ? first : second;
 }
 
 function findPeriod(profile: Float64Array): Period | null {
@@ -156,22 +379,90 @@ function findPeriod(profile: Float64Array): Period | null {
 
   if (bestLag === 0 || bestScore < minConfidence) return null;
 
-  // Кратные шагу тоже дают всплеск: 2 и 3 клетки повторяются не хуже одной.
-  // Берём самый мелкий шаг, который объясняет картину не хуже найденного.
+  // Всплеск автокорреляции дают и кратные шагу, и его доли: две клетки
+  // повторяются не хуже одной, а полклетки — там, где на чертеже есть мелкие
+  // детали. Раньше бралась самая мелкая подходящая доля, и на планах ЦБСС
+  // это давало полшага вместо шага. Теперь кандидатов судит контраст:
+  // у настоящей сетки на линии темно, а посередине между линиями светло.
+  const candidates = new Set<number>();
+  for (const factor of [0.25, 1 / 3, 0.5, 1, 2]) {
+    const candidate = bestLag * factor;
+    if (candidate >= minStepPx && candidate <= maxStepPx) candidates.add(candidate);
+  }
+
   let base = bestLag;
-  for (const divisor of [4, 3, 2]) {
-    const candidate = Math.round(bestLag / divisor);
-    if (candidate >= minStepPx && scores[candidate] >= bestScore * 0.8) {
-      base = candidate;
-      break;
+  let bestContrast = -Infinity;
+  for (const candidate of candidates) {
+    const period = refine(profile, candidate) ?? candidate;
+    const contrast = lineContrast(profile, period);
+    if (contrast > bestContrast) {
+      bestContrast = contrast;
+      base = period;
     }
   }
 
   return {
-    period: refine(profile, base) ?? base,
+    period: base,
     confidence: Math.min(1, bestScore),
+    contrast: bestContrast,
   };
 }
+
+/**
+ * Насколько хорошо шаг объясняет картину: средняя разница между яркостью
+ * на линии и посередине между линиями.
+ *
+ * У половинного шага каждая вторая «линия» попадает в пустую клетку, у двойного
+ * «середина» попадает на настоящую линию — оба набирают меньше. Высокий балл
+ * получает только настоящий шаг.
+ */
+function lineContrast(profile: Float64Array, period: number): number {
+  const phase = phaseOf(profile, period);
+  let peak = 0;
+  for (let i = 0; i < profile.length; i += 1) if (profile[i] > peak) peak = profile[i];
+  if (peak <= 0) return 0;
+
+  let sum = 0;
+  let count = 0;
+  let position = phase;
+  while (position < profile.length) {
+    const index = localMaxIndex(profile, position, period * 0.2);
+    sum += Math.max(0, profile[index] - betweenAt(profile, index, period));
+    count += 1;
+    // Подтягиваемся к найденной линии, чтобы ошибка шага не накапливалась.
+    position = index + period;
+  }
+
+  return count > 0 ? sum / count / peak : 0;
+}
+
+/**
+ * Яркость посередине клетки — точечно, в пиксель.
+ *
+ * Окно поиска не должно расти вместе с проверяемым шагом: у двойного шага
+ * середина приходится на настоящую линию, но широкое окно дотянулось бы
+ * до светлого места рядом, и двойной шаг выглядел бы убедительно.
+ */
+function betweenAt(profile: Float64Array, lineIndex: number, period: number): number {
+  // Смотрим самое тёмное в крошечном окне: линия после уменьшения картинки
+  // бывает толщиной в пиксель, и по самому светлому месту рядом с ней всегда
+  // нашёлся бы белый — двойной шаг проходил бы проверку.
+  return Math.max(localMaxValue(profile, lineIndex - period / 2, 1), localMaxValue(profile, lineIndex + period / 2, 1));
+}
+
+function localMaxValue(profile: Float64Array, position: number, radius: number): number {
+  return profile[localMaxIndex(profile, position, radius)] ?? 0;
+}
+
+/** Самое тёмное место рядом: линия редко попадает точно в расчётную точку. */
+function localMaxIndex(profile: Float64Array, position: number, radius: number): number {
+  const from = Math.max(0, Math.floor(position - radius));
+  const to = Math.min(profile.length - 1, Math.ceil(position + radius));
+  let best = Math.min(profile.length - 1, Math.max(0, Math.round(position)));
+  for (let i = from; i <= to; i += 1) if (profile[i] > profile[best]) best = i;
+  return best;
+}
+
 
 /**
  * Уточняет шаг по положениям линий: находит их центры и подгоняет прямую

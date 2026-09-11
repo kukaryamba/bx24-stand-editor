@@ -15,7 +15,7 @@ import { usePanelWidths } from "../features/plan-editor/hooks/usePanelWidths";
 import { useStandPlanSync } from "../features/plan-editor/hooks/useStandPlanSync";
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
 import { defaultStandSizeM, findStandByDeal, formatMeters, getFloorPlan, getFloorPlanKind, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
-import { detectGridStep } from "../shared/geometry/detectGrid";
+import { cropImage, detectGridStep } from "../shared/geometry/detectGrid";
 import { bundledPlans } from "../shared/domain/bundledPlans";
 import { standTemplates } from "../shared/domain/standTemplates";
 import { dealTabPlacement, stretchAppWindow } from "../shared/crm/bitrixApi";
@@ -30,6 +30,11 @@ export function App() {
   const [showPassport, setShowPassport] = useState(false);
   const [skipInstall, setSkipInstall] = useState(false);
   const [gridNotice, setGridNotice] = useState<string | null>(null);
+  /**
+   * Обрезать ли план при загрузке. Автомат может ошибиться на необычной
+   * картинке — тогда галочку снимают и загружают план целиком.
+   */
+  const [autoCrop, setAutoCrop] = useState(true);
   const { widths, startResize, resetPanel } = usePanelWidths();
   const [portalError, setPortalError] = useState<string | null>(null);
   /** Что уже отправлено в портал — чтобы не слать одно и то же. */
@@ -204,31 +209,34 @@ export function App() {
 
     const dataUrl = await readFileAsDataUrl(file);
     const image = await readImage(dataUrl);
-    const size = { width: image.naturalWidth || image.width, height: image.naturalHeight || image.height };
-
-    setFloorPlanBackground(
-      activePlan.id,
-      {
-        name: file.name,
-        imageUrl: dataUrl,
-        width: size.width,
-        height: size.height,
-      },
-      size,
-    );
 
     // Планы чертят по сетке, и её шаг на картинке — это и есть масштаб.
     const detection = detectGridStep(image);
+
+    // Шапка с логотипом, текст и белые поля плану не нужны, а место
+    // в хранилище браузера занимают. Обрезаем по сетке, если это не отключено.
+    const frame = autoCrop ? detection?.frame ?? null : null;
+    const imageUrl = frame ? cropImage(image, frame) : dataUrl;
+    const size = frame
+      ? { width: frame.width, height: frame.height }
+      : { width: image.naturalWidth || image.width, height: image.naturalHeight || image.height };
+
+    setFloorPlanBackground(activePlan.id, { name: file.name, imageUrl, width: size.width, height: size.height }, size);
+
     if (detection) {
+      const cell = detection.cellSizePx;
+      // После обрезки начало координат сдвинулось — пересчитываем фазу сетки.
+      const phase = (value: number, origin: number) => Math.round(((((value - origin) % cell) + cell) % cell) * 100) / 100;
+
       updateFloorPlanGrid(activePlan.id, {
-        cellSizePx: detection.cellSizePx,
+        cellSizePx: cell,
         metersPerCell: 1,
-        offsetX: detection.offsetX,
-        offsetY: detection.offsetY,
+        offsetX: phase(detection.offsetX, frame?.x ?? 0),
+        offsetY: phase(detection.offsetY, frame?.y ?? 0),
       });
-      setGridNotice(
-        `Масштаб определён по сетке чертежа: ${formatMeters(detection.cellSizePx)} пикселя на метр. Проверьте по стенду с известной площадью и поправьте, если клетка чертежа не равна метру.`,
-      );
+
+      const scaleNote = `Масштаб определён по сетке чертежа: ${formatMeters(cell)} пикселя на метр. Проверьте по стенду с известной площадью и поправьте, если клетка чертежа не равна метру.`;
+      setGridNotice(frame ? `План обрезан по сетке, шапка и поля убраны. ${scaleNote}` : scaleNote);
     } else {
       setGridNotice("Сетку на картинке найти не удалось — задайте масштаб вручную.");
     }
@@ -385,6 +393,12 @@ export function App() {
 
         {activePlan && screen === "expo" ? (
           <div className="panel-section grid-settings">
+            <label className="checkbox-row">
+              <input type="checkbox" checked={autoCrop} onChange={(event) => setAutoCrop(event.target.checked)} />
+              Обрезать план по сетке при загрузке
+            </label>
+            <p>Убирает шапку, текст и белые поля. Если обрезало не так — снимите галочку и загрузите план заново.</p>
+
             <h2>Масштаб сетки</h2>
             <label>
               1 метр на плане

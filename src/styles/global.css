@@ -38,6 +38,20 @@ button {
   overflow: hidden;
 }
 
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.checkbox-row input {
+  width: auto;
+  margin: 0;
+}
+
 .panel-resizer {
   cursor: col-resize;
   background: #d9dee7;
