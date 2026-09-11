@@ -61,15 +61,23 @@ jobs:
         # упали две выкладки из шести, обе на сетевых шагах, без изменений
         # в файлах. Поэтому пять попыток с нарастающей паузой: короткий сбой
         # переждать, а не заставлять человека перезапускать выкладку.
+        #
+        # Текст ошибки выносится в аннотацию: подробный лог GitHub показывает
+        # только администратору репозитория, а аннотации видны всем. Без этого
+        # причину сбоя приходилось угадывать.
         run: |
           for attempt in 1 2 3 4 5; do
-            if rsync -rlz --delete --checksum --verbose --timeout=120 \
+            rsync -rlz --delete --checksum --verbose --timeout=120 \
               -e "ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4" \
-              dist/ "${{ secrets.TIMEWEB_USER }}@${{ secrets.TIMEWEB_HOST }}:${{ env.TARGET_DIR }}"; then
+              dist/ "${{ secrets.TIMEWEB_USER }}@${{ secrets.TIMEWEB_HOST }}:${{ env.TARGET_DIR }}" > rsync.log 2>&1 && code=0 || code=$?
+            cat rsync.log
+            if [ "$code" -eq 0 ]; then
               exit 0
             fi
+            # Аннотация однострочная, поэтому переводы строк заменяем.
+            reason=$(grep -v '^$' rsync.log | tail -n 6 | tr '\n' ' ' | cut -c1-900)
             pause=$((attempt * 15))
-            echo "::warning::Попытка $attempt не удалась, следующая через $pause с"
+            echo "::warning title=Заливка, попытка $attempt, код rsync $code::$reason"
             sleep $pause
           done
           exit 1
