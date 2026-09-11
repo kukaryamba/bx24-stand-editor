@@ -62,13 +62,16 @@ jobs:
         # в файлах. Поэтому пять попыток с нарастающей паузой: короткий сбой
         # переждать, а не заставлять человека перезапускать выкладку.
         #
+        # Только IPv4 (-4): у сервера хостинга есть и IPv6-адрес, а у серверов
+        # GitHub IPv6-связи нет. Заливка падала с «Network is unreachable».
+        #
         # Текст ошибки выносится в аннотацию: подробный лог GitHub показывает
         # только администратору репозитория, а аннотации видны всем. Без этого
         # причину сбоя приходилось угадывать.
         run: |
           for attempt in 1 2 3 4 5; do
             rsync -rlz --delete --checksum --verbose --timeout=120 \
-              -e "ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4" \
+              -e "ssh -4 -i ~/.ssh/id_ed25519 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4" \
               dist/ "${{ secrets.TIMEWEB_USER }}@${{ secrets.TIMEWEB_HOST }}:${{ env.TARGET_DIR }}" > rsync.log 2>&1 && code=0 || code=$?
             cat rsync.log
             if [ "$code" -eq 0 ]; then
