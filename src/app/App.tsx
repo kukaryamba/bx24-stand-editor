@@ -3,6 +3,7 @@ import { Download, FileText, Grid2x2, Hand, ImageUp, MousePointer2, PenTool, Red
 import { DealSyncPanel } from "../features/plan-editor/components/DealSyncPanel";
 import { FurniturePalette } from "../features/plan-editor/components/FurniturePalette";
 import { InstallScreen } from "../features/plan-editor/components/InstallScreen";
+import { PlanLibrary } from "../features/plan-editor/components/PlanLibrary";
 import { PlanCanvas } from "../features/plan-editor/components/PlanCanvas";
 import { PropertiesPanel } from "../features/plan-editor/components/PropertiesPanel";
 import { SpecificationDialog } from "../features/plan-editor/components/SpecificationDialog";
@@ -17,7 +18,6 @@ import { useEditorStore } from "../features/plan-editor/store/editorStore";
 import { defaultStandSizeM, findStandByDeal, formatMeters, getFloorPlan, getFloorPlanKind, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
 import { cropImage, detectGridStep } from "../shared/geometry/detectGrid";
 import { uploadPlanImage } from "../shared/storage/planUpload";
-import { bundledPlans } from "../shared/domain/bundledPlans";
 import { standTemplates } from "../shared/domain/standTemplates";
 import { dealTabPlacement, stretchAppWindow } from "../shared/crm/bitrixApi";
 import { bitrixCrmProvider } from "../shared/crm/bitrixCrmProvider";
@@ -36,8 +36,6 @@ export function App() {
    * картинке — тогда галочку снимают и загружают план целиком.
    */
   const [autoCrop, setAutoCrop] = useState(true);
-  /** Какой готовый план ждёт второго щелчка для замены подложки. */
-  const [confirmBundledId, setConfirmBundledId] = useState<string | null>(null);
   const { widths, startResize, resetPanel } = usePanelWidths();
   const [portalError, setPortalError] = useState<string | null>(null);
   /** Что уже отправлено в портал — чтобы не слать одно и то же. */
@@ -444,47 +442,7 @@ export function App() {
             </label>
             <p>Печатается в паспорте стенда.</p>
 
-            <h2>Готовые планы</h2>
-            <div className="stand-templates">
-              {bundledPlans.map((bundled) => {
-                const current = activePlan.background?.imageUrl === bundled.background.imageUrl;
-                // Одним щелчком подложка менялась молча. Если своя уже стоит,
-                // первый щелчок только спрашивает, второй — заменяет.
-                const needsConfirm = Boolean(activePlan.background) && !current;
-                const armed = confirmBundledId === bundled.id;
-
-                return (
-                  <button
-                    key={bundled.id}
-                    type="button"
-                    className={armed ? "is-danger" : current ? "is-active" : ""}
-                    onClick={() => {
-                      if (current) return;
-                      if (needsConfirm && !armed) {
-                        setConfirmBundledId(bundled.id);
-                        return;
-                      }
-
-                      setConfirmBundledId(null);
-                      setFloorPlanBackground(
-                        activePlan.id,
-                        bundled.background,
-                        { width: bundled.background.width, height: bundled.background.height },
-                        bundled.grid,
-                      );
-                      setGridNotice(null);
-                      fitToScreen();
-                    }}
-                    onBlur={() => setConfirmBundledId((value) => (value === bundled.id ? null : value))}
-                    title={bundled.description}
-                  >
-                    <strong>{current ? `${bundled.title} — уже стоит` : bundled.title}</strong>
-                    <span>{armed ? "Нажмите ещё раз, чтобы заменить текущий план. Отменить можно через Ctrl+Z." : bundled.description}</span>
-                  </button>
-                );
-              })}
-            </div>
-            <p>Готовый план заменяет текущую подложку. Свой план загружайте кнопкой «Загрузить план» — он сохранится на хостинг, и его увидят все.</p>
+            <PlanLibrary plan={activePlan} onApplied={() => setGridNotice(null)} />
 
             <h2>Сдвиг сетки</h2>
             <div className="stand-size">

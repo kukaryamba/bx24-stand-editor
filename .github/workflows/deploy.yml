@@ -57,17 +57,20 @@ jobs:
       - name: Заливка
         # --delete убирает с хостинга то, чего больше нет в сборке: иначе
         # старые файлы каталога копятся годами.
-        # Три попытки: соединение с хостингом изредка рвётся, и из-за этого
-        # не стоит заставлять человека перезапускать выкладку руками.
+        # Соединение между серверами GitHub и хостингом иногда рвётся — так
+        # упали две выкладки из шести, обе на сетевых шагах, без изменений
+        # в файлах. Поэтому пять попыток с нарастающей паузой: короткий сбой
+        # переждать, а не заставлять человека перезапускать выкладку.
         run: |
-          for attempt in 1 2 3; do
-            if rsync -rlz --delete --checksum \
-              -e "ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=30" \
+          for attempt in 1 2 3 4 5; do
+            if rsync -rlz --delete --checksum --verbose --timeout=120 \
+              -e "ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4" \
               dist/ "${{ secrets.TIMEWEB_USER }}@${{ secrets.TIMEWEB_HOST }}:${{ env.TARGET_DIR }}"; then
               exit 0
             fi
-            echo "Попытка $attempt не удалась, пробую ещё раз"
-            sleep 10
+            pause=$((attempt * 15))
+            echo "::warning::Попытка $attempt не удалась, следующая через $pause с"
+            sleep $pause
           done
           exit 1
 

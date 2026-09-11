@@ -598,6 +598,47 @@ p {
   background: #f4f8ff;
 }
 
+/* Строка списка планов: сам план и крестик, чтобы убрать сохранённый. */
+.plan-library__row {
+  display: flex;
+  gap: 4px;
+}
+
+.plan-library__row > button:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.plan-library__remove {
+  flex: none;
+  min-width: 32px;
+  padding: 0 8px;
+  border: 1px solid #d9dee7;
+  background: #ffffff;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.plan-library__remove.is-danger {
+  border-color: #b3261e;
+  background: #fdecec;
+  color: #b3261e;
+  font-size: 11px;
+}
+
+.plan-library__save {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.plan-library__save input {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid #cbd2dc;
+}
+
 /* Этот план уже стоит подложкой — щелчок по нему ничего не делает. */
 .stand-templates button.is-active {
   border-color: #14803c;
