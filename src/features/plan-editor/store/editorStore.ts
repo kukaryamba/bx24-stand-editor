@@ -104,7 +104,16 @@ type EditorState = {
     },
   ) => void;
   updateFloorPlanGrid: (floorPlanId: string, patch: Partial<FloorPlan["grid"]>) => void;
-  setFloorPlanBackground: (floorPlanId: string, background: FloorPlan["background"], size?: Pick<FloorPlan, "width" | "height">) => void;
+  /**
+   * Меняет подложку плана. Сетку можно передать сразу: тогда картинка
+   * и масштаб меняются одним шагом истории и откатываются одним Ctrl+Z.
+   */
+  setFloorPlanBackground: (
+    floorPlanId: string,
+    background: FloorPlan["background"],
+    size?: Pick<FloorPlan, "width" | "height">,
+    grid?: Partial<FloorPlan["grid"]>,
+  ) => void;
   deleteObject: (objectId: string) => void;
   addFurniture: (itemId: string, position: Point) => void;
   moveFurniture: (objectId: string, origin: Point) => void;
@@ -339,7 +348,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
     set({ draftPoints: [], validationMessage: null });
   },
-  setFloorPlanBackground: (floorPlanId, background, size) => {
+  setFloorPlanBackground: (floorPlanId, background, size, grid) => {
     const project = get().project;
     if (!project) return;
 
@@ -352,10 +361,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
               background,
               width: size?.width ?? plan.width,
               height: size?.height ?? plan.height,
+              grid: grid ? { ...plan.grid, ...grid } : plan.grid,
             }
           : plan,
       ),
     });
+    set({ draftPoints: [], validationMessage: null });
   },
   deleteObject: (objectId) => {
     get().deleteObjects([objectId]);

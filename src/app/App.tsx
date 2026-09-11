@@ -16,6 +16,7 @@ import { useStandPlanSync } from "../features/plan-editor/hooks/useStandPlanSync
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
 import { defaultStandSizeM, findStandByDeal, formatMeters, getFloorPlan, getFloorPlanKind, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
 import { cropImage, detectGridStep } from "../shared/geometry/detectGrid";
+import { uploadPlanImage } from "../shared/storage/planUpload";
 import { bundledPlans } from "../shared/domain/bundledPlans";
 import { standTemplates } from "../shared/domain/standTemplates";
 import { dealTabPlacement, stretchAppWindow } from "../shared/crm/bitrixApi";
@@ -35,6 +36,8 @@ export function App() {
    * картинке — тогда галочку снимают и загружают план целиком.
    */
   const [autoCrop, setAutoCrop] = useState(true);
+  /** Какой готовый план ждёт второго щелчка для замены подложки. */
+  const [confirmBundledId, setConfirmBundledId] = useState<string | null>(null);
   const { widths, startResize, resetPanel } = usePanelWidths();
   const [portalError, setPortalError] = useState<string | null>(null);
   /** Что уже отправлено в портал — чтобы не слать одно и то же. */
@@ -216,30 +219,47 @@ export function App() {
     // Шапка с логотипом, текст и белые поля плану не нужны, а место
     // в хранилище браузера занимают. Обрезаем по сетке, если это не отключено.
     const frame = autoCrop ? detection?.frame ?? null : null;
-    const imageUrl = frame ? cropImage(image, frame) : dataUrl;
+    const localUrl = frame ? cropImage(image, frame) : dataUrl;
     const size = frame
       ? { width: frame.width, height: frame.height }
       : { width: image.naturalWidth || image.width, height: image.naturalHeight || image.height };
 
-    setFloorPlanBackground(activePlan.id, { name: file.name, imageUrl, width: size.width, height: size.height }, size);
-
-    if (detection) {
-      const cell = detection.cellSizePx;
-      // После обрезки начало координат сдвинулось — пересчитываем фазу сетки.
-      const phase = (value: number, origin: number) => Math.round(((((value - origin) % cell) + cell) % cell) * 100) / 100;
-
-      updateFloorPlanGrid(activePlan.id, {
-        cellSizePx: cell,
-        metersPerCell: 1,
-        offsetX: phase(detection.offsetX, frame?.x ?? 0),
-        offsetY: phase(detection.offsetY, frame?.y ?? 0),
-      });
-
-      const scaleNote = `Масштаб определён по сетке чертежа: ${formatMeters(cell)} пикселя на метр. Проверьте по стенду с известной площадью и поправьте, если клетка чертежа не равна метру.`;
-      setGridNotice(frame ? `План обрезан по сетке, шапка и поля убраны. ${scaleNote}` : scaleNote);
+    // Кладём план на хостинг, чтобы подложку видели все. Не вышло — план
+    // остаётся в этом браузере, а человек узнаёт, почему коллеги его не видят.
+    let imageUrl = localUrl;
+    let storageNote = "";
+    if (crm.provider === "bitrix24") {
+      setGridNotice("Сохраняю план на хостинг, чтобы его видели коллеги...");
+      try {
+        imageUrl = await uploadPlanImage(localUrl, file.name);
+        storageNote = "План сохранён для всех — коллеги увидят его, открыв сделку.";
+      } catch (error) {
+        storageNote = `${error instanceof Error ? error.message : "Не удалось сохранить план для всех."} Коллеги увидят стенды без подложки.`;
+      }
     } else {
-      setGridNotice("Сетку на картинке найти не удалось — задайте масштаб вручную.");
+      storageNote = "Приложение открыто не из портала, поэтому план сохранён только в этом браузере.";
     }
+
+    // Сетку и картинку меняем одним шагом, чтобы отмена возвращала всё разом.
+    const cell = detection?.cellSizePx;
+    const phase = (value: number, origin: number) =>
+      cell ? Math.round(((((value - origin) % cell) + cell) % cell) * 100) / 100 : 0;
+    const grid = detection
+      ? {
+          cellSizePx: detection.cellSizePx,
+          metersPerCell: 1,
+          // После обрезки начало координат сдвинулось — пересчитываем фазу сетки.
+          offsetX: phase(detection.offsetX, frame?.x ?? 0),
+          offsetY: phase(detection.offsetY, frame?.y ?? 0),
+        }
+      : undefined;
+
+    setFloorPlanBackground(activePlan.id, { name: file.name, imageUrl, width: size.width, height: size.height }, size, grid);
+
+    const scaleNote = detection
+      ? `Масштаб определён по сетке чертежа: ${formatMeters(detection.cellSizePx)} пикселя на метр. Проверьте по стенду с известной площадью.`
+      : "Сетку на картинке найти не удалось — задайте масштаб вручную.";
+    setGridNotice([frame ? "План обрезан по сетке, шапка и поля убраны." : "", scaleNote, storageNote].filter(Boolean).join(" "));
 
     // План только что сменил размер — показываем его целиком, иначе он уезжает за край.
     fitToScreen();
@@ -426,27 +446,45 @@ export function App() {
 
             <h2>Готовые планы</h2>
             <div className="stand-templates">
-              {bundledPlans.map((bundled) => (
-                <button
-                  key={bundled.id}
-                  type="button"
-                  onClick={() => {
-                    setFloorPlanBackground(activePlan.id, bundled.background, {
-                      width: bundled.background.width,
-                      height: bundled.background.height,
-                    });
-                    updateFloorPlanGrid(activePlan.id, bundled.grid);
-                    setGridNotice(null);
-                    fitToScreen();
-                  }}
-                  title={bundled.description}
-                >
-                  <strong>{bundled.title}</strong>
-                  <span>{bundled.description}</span>
-                </button>
-              ))}
+              {bundledPlans.map((bundled) => {
+                const current = activePlan.background?.imageUrl === bundled.background.imageUrl;
+                // Одним щелчком подложка менялась молча. Если своя уже стоит,
+                // первый щелчок только спрашивает, второй — заменяет.
+                const needsConfirm = Boolean(activePlan.background) && !current;
+                const armed = confirmBundledId === bundled.id;
+
+                return (
+                  <button
+                    key={bundled.id}
+                    type="button"
+                    className={armed ? "is-danger" : current ? "is-active" : ""}
+                    onClick={() => {
+                      if (current) return;
+                      if (needsConfirm && !armed) {
+                        setConfirmBundledId(bundled.id);
+                        return;
+                      }
+
+                      setConfirmBundledId(null);
+                      setFloorPlanBackground(
+                        activePlan.id,
+                        bundled.background,
+                        { width: bundled.background.width, height: bundled.background.height },
+                        bundled.grid,
+                      );
+                      setGridNotice(null);
+                      fitToScreen();
+                    }}
+                    onBlur={() => setConfirmBundledId((value) => (value === bundled.id ? null : value))}
+                    title={bundled.description}
+                  >
+                    <strong>{current ? `${bundled.title} — уже стоит` : bundled.title}</strong>
+                    <span>{armed ? "Нажмите ещё раз, чтобы заменить текущий план. Отменить можно через Ctrl+Z." : bundled.description}</span>
+                  </button>
+                );
+              })}
             </div>
-            <p>План из состава приложения виден всем сотрудникам, а масштаб у него уже выверен. Своя картинка остаётся только в вашем браузере.</p>
+            <p>Готовый план заменяет текущую подложку. Свой план загружайте кнопкой «Загрузить план» — он сохранится на хостинг, и его увидят все.</p>
 
             <h2>Сдвиг сетки</h2>
             <div className="stand-size">

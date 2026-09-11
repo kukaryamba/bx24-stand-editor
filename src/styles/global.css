@@ -598,6 +598,23 @@ p {
   background: #f4f8ff;
 }
 
+/* Этот план уже стоит подложкой — щелчок по нему ничего не делает. */
+.stand-templates button.is-active {
+  border-color: #14803c;
+  background: #f1faf4;
+  cursor: default;
+}
+
+/* Ждёт второго щелчка: следующий заменит текущую подложку. */
+.stand-templates button.is-danger {
+  border-color: #b3261e;
+  background: #fdecec;
+}
+
+.stand-templates button.is-danger span {
+  color: #b3261e;
+}
+
 .stand-templates strong {
   font-size: 13px;
 }

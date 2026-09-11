@@ -23,6 +23,8 @@ type Bx24 = {
   resizeWindow?(width: number, height: number): void;
   /** Домен портала, например alit.bitrix24.ru. */
   getDomain?(): string;
+  /** Токен текущего пользователя — им сервер проверяет, что запрос из портала. */
+  getAuth?(): { access_token: string; domain: string } | false;
 };
 
 declare global {
@@ -253,6 +255,20 @@ export function portalOrigin(): string | null {
   domain ??= new URLSearchParams(window.location.search).get("DOMAIN");
 
   return domain ? `https://${domain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}` : null;
+}
+
+/**
+ * Подтверждение, что запрос идёт от сотрудника портала.
+ * Вне портала его нет — и загрузка на хостинг недоступна.
+ */
+export function portalAuth(): { domain: string; token: string } | null {
+  try {
+    const auth = window.BX24?.getAuth?.();
+    if (!auth || !auth.access_token || !auth.domain) return null;
+    return { domain: auth.domain.replace(/^https?:\/\//, "").replace(/\/+$/, ""), token: auth.access_token };
+  } catch {
+    return null;
+  }
 }
 
 /** Ссылка на карточку сделки в портале. */
