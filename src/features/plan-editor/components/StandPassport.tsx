@@ -175,6 +175,13 @@ export function StandPassport({ onClose }: Props) {
           </div>
         ) : null}
 
+        {specification.friezeLengthM > 0 ? (
+          <div className="passport__section">
+            <h3>FRAME BOARD PANELS // ФРИЗОВЫЕ ПАНЕЛИ</h3>
+            <p>Суммарная длина: {formatNumber(specification.friezeLengthM)} м</p>
+          </div>
+        ) : null}
+
         <div className="passport__section">
           <h3>COMMENTS // ПРИМЕЧАНИЯ</h3>
           <p>{standMeta?.note?.trim() ? standMeta.note : "—"}</p>

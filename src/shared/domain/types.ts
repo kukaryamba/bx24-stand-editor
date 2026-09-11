@@ -24,6 +24,11 @@ export type FurnitureSource = "price2026" | "legacy";
 export type FurnitureItem = {
   id: string;
   source?: FurnitureSource;
+  /**
+   * Фризовая панель. Лежит среди стен и цепляется к сетке как стена, но
+   * в спецификации считается отдельно: это не стеновая панель.
+   */
+  frieze?: boolean;
   /** Идентификатор в каталоге CRM, по нему считается спецификация. Пустой — позиции нет в смете. */
   catalogId: string;
   title: string;
@@ -66,6 +71,8 @@ export type Specification = {
   perimeterM: number;
   /** Суммарная длина расставленных стеновых панелей, метры. */
   wallLengthM: number;
+  /** Суммарная длина фризовых панелей, метры — их заказывают погонными метрами. */
+  friezeLengthM: number;
   totalRub?: number;
   /** Есть ли позиции без номера в каталоге — они не попадут в смету CRM. */
   itemsWithoutCatalogId: number;

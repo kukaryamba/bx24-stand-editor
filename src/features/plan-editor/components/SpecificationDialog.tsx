@@ -65,6 +65,12 @@ export function SpecificationDialog({ onClose }: Props) {
               <dd>{formatNumber(specification.wallLengthM)} м</dd>
             </div>
           ) : null}
+          {specification.friezeLengthM > 0 ? (
+            <div>
+              <dt>Фризовые панели</dt>
+              <dd>{formatNumber(specification.friezeLengthM)} м</dd>
+            </div>
+          ) : null}
         </dl>
 
         {specification.groups.length === 0 ? (

@@ -25,6 +25,7 @@ export function buildSpecification(project: ExhibitionProject | null, floorPlanI
 
   const rows: SpecificationRow[] = [];
   let wallLengthM = 0;
+  let friezeLengthM = 0;
 
   for (const [itemId, quantity] of counts) {
     const item = getFurnitureItem(itemId);
@@ -42,7 +43,10 @@ export function buildSpecification(project: ExhibitionProject | null, floorPlanI
       sumRub: priceRub === undefined ? undefined : priceRub * quantity,
     });
 
-    if (item.category === "walls") {
+    if (item.frieze) {
+      // Фриз заказывают погонными метрами, отдельно от стен.
+      friezeLengthM += item.widthM * quantity;
+    } else if (item.category === "walls") {
       // У стеновых панелей длина — это их ширина по плану.
       wallLengthM += item.widthM * quantity;
     }
@@ -69,6 +73,7 @@ export function buildSpecification(project: ExhibitionProject | null, floorPlanI
     areaM2,
     perimeterM,
     wallLengthM: round1(wallLengthM),
+    friezeLengthM: round1(friezeLengthM),
     totalRub,
     itemsWithoutCatalogId: rows.filter((row) => !row.catalogId).reduce((sum, row) => sum + row.quantity, 0),
   };
@@ -80,6 +85,9 @@ export function specificationToText(specification: Specification, standTitle: st
 
   lines.push(`Площадь: ${formatNumber(specification.areaM2)} м²`);
   lines.push(`Периметр: ${formatNumber(specification.perimeterM)} м`);
+  if (specification.friezeLengthM > 0) {
+    lines.push(`Фризовые панели: ${formatNumber(specification.friezeLengthM)} м`);
+  }
   if (specification.wallLengthM > 0) {
     lines.push(`Стеновые панели: ${formatNumber(specification.wallLengthM)} м`);
   }
