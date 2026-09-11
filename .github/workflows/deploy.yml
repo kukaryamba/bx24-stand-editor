@@ -45,17 +45,31 @@ jobs:
           install -m 700 -d ~/.ssh
           echo "${{ secrets.TIMEWEB_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          # Отпечаток сервера сохраняем заранее: без него ssh спросит
-          # подтверждение и выкладка зависнет.
-          ssh-keyscan -H "${{ secrets.TIMEWEB_HOST }}" >> ~/.ssh/known_hosts
+          # Отпечаток сервера записан здесь, а не запрашивается по сети:
+          # ssh-keyscan иногда не дожидается ответа, и выкладка падала на ровном
+          # месте. Заодно это защита — подменённый сервер ключ не примет.
+          # Отпечаток публичный, секретом не является.
+          cat >> ~/.ssh/known_hosts <<'EOF'
+          vh410.timeweb.ru ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGeu4tBLCAo4QotWYAdt51FP6166yu4vhWvJhRRgB4ZQ
+          vh410.timeweb.ru ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBMp8wu5PIHaj/cAmW2BeHeGtxQY873ueqbVAJu0t0IlrTT0OfCl0hP/kUDVK3MBfvwZUcTqRA+vScStxhUtjP5Y=
+          EOF
 
       - name: Заливка
         # --delete убирает с хостинга то, чего больше нет в сборке: иначе
         # старые файлы каталога копятся годами.
+        # Три попытки: соединение с хостингом изредка рвётся, и из-за этого
+        # не стоит заставлять человека перезапускать выкладку руками.
         run: |
-          rsync -rlz --delete --checksum \
-            -e "ssh -i ~/.ssh/id_ed25519" \
-            dist/ "${{ secrets.TIMEWEB_USER }}@${{ secrets.TIMEWEB_HOST }}:${{ env.TARGET_DIR }}"
+          for attempt in 1 2 3; do
+            if rsync -rlz --delete --checksum \
+              -e "ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=30" \
+              dist/ "${{ secrets.TIMEWEB_USER }}@${{ secrets.TIMEWEB_HOST }}:${{ env.TARGET_DIR }}"; then
+              exit 0
+            fi
+            echo "Попытка $attempt не удалась, пробую ещё раз"
+            sleep 10
+          done
+          exit 1
 
       - name: Проверка, что портал сможет открыть приложение
         # Битрикс24 обращается POST-запросом. Если ответ не 200, вкладка
