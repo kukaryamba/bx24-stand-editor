@@ -316,7 +316,7 @@ export function App() {
           items={[
             { icon: MousePointer2, label: "Выбор", active: tool === "select", onClick: () => setTool("select") },
             { icon: Hand, label: "Панорама", active: tool === "pan", onClick: () => setTool("pan") },
-            { icon: PenTool, label: "Полигон", active: tool === "polygon", onClick: () => setTool("polygon") },
+            { icon: PenTool, label: "Создать стенд", active: tool === "polygon", onClick: () => setTool("polygon") },
             { icon: ImageUp, label: "Загрузить план", onClick: () => backgroundUploadRef.current?.click() },
             {
               icon: Grid2x2,
