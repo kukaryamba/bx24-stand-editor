@@ -1040,6 +1040,13 @@ p {
   resize: vertical;
 }
 
+.stand-hint {
+  margin: -6px 0 0;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .stand-facts {
   display: grid;
   gap: 8px;

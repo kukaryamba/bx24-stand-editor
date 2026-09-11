@@ -21,6 +21,8 @@ type Bx24 = {
   installFinish?(): void;
   /** Меняет размер фрейма, в котором портал показывает приложение. */
   resizeWindow?(width: number, height: number): void;
+  /** Домен портала, например alit.bitrix24.ru. */
+  getDomain?(): string;
 };
 
 declare global {
@@ -235,6 +237,29 @@ export function stretchAppWindow(): void {
 const minAppHeight = 700;
 /** Запас на шапку портала, вкладки карточки и панель задач. */
 const portalChrome = 260;
+
+/**
+ * Адрес портала. Библиотека знает его после запуска, а до того — и вне
+ * фрейма — его можно взять из параметров, с которыми портал открыл страницу.
+ * Вне портала адреса нет: приложение не знает, чей это Битрикс24.
+ */
+export function portalOrigin(): string | null {
+  let domain: string | null = null;
+  try {
+    domain = window.BX24?.getDomain?.() || null;
+  } catch {
+    domain = null;
+  }
+  domain ??= new URLSearchParams(window.location.search).get("DOMAIN");
+
+  return domain ? `https://${domain.replace(/^https?:\/\//, "").replace(/\/+$/, "")}` : null;
+}
+
+/** Ссылка на карточку сделки в портале. */
+export function dealUrl(dealId: string): string | null {
+  const origin = portalOrigin();
+  return origin ? `${origin}/crm/deal/details/${encodeURIComponent(dealId)}/` : null;
+}
 
 export function finishInstall(): void {
   window.BX24?.installFinish?.();

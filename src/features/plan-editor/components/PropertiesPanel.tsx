@@ -1,4 +1,5 @@
-import { LayoutGrid, Trash2 } from "lucide-react";
+import { ExternalLink, LayoutGrid, Trash2 } from "lucide-react";
+import { dealUrl } from "../../../shared/crm/bitrixApi";
 import { useMemo } from "react";
 import { getFurnitureItem } from "../../../shared/domain/furniture";
 import { getCanvasObject, getFloorPlan, getObjectFurnitureMeta, getObjectPoints, getObjectStandMeta } from "../../../shared/domain/project";
@@ -6,6 +7,28 @@ import { statusLabels } from "../../../shared/domain/status";
 import { polygonArea } from "../../../shared/geometry/polygon";
 import { standStatuses, useEditorStore } from "../store/editorStore";
 import { PassportForm } from "./PassportForm";
+
+/**
+ * Переход в сделку стенда — в новой вкладке, чтобы не терять план.
+ *
+ * Внутри портала сделка открылась бы и в боковой панели Битрикс24, но тогда
+ * она перекрыла бы редактор. Отдельная вкладка позволяет держать рядом и план,
+ * и карточку клиента.
+ */
+function OpenDealButton({ dealId }: { dealId: string }) {
+  const url = dealUrl(dealId);
+
+  if (!url) {
+    return <p className="stand-hint">Открыть сделку можно, когда приложение запущено из портала.</p>;
+  }
+
+  return (
+    <button type="button" onClick={() => window.open(url, "_blank", "noopener")}>
+      <ExternalLink size={16} aria-hidden />
+      Открыть сделку в новой вкладке
+    </button>
+  );
+}
 
 export function PropertiesPanel() {
   const project = useEditorStore((state) => state.project);
@@ -112,6 +135,8 @@ export function PropertiesPanel() {
             Сделка
             <input value={stand.dealId ?? ""} placeholder={crm.dealId ?? "dealId"} onChange={(event) => updateStand(object.id, { dealId: event.target.value || null })} />
           </label>
+
+          {stand.dealId ? <OpenDealButton dealId={stand.dealId} /> : null}
 
           <label>
             Комментарий
