@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, FileText, Grid2x2, Hand, ImageUp, MousePointer2, PenTool, Redo2, Save, Undo2, ZoomIn, ZoomOut } from "lucide-react";
+import { Download, FileText, Grid2x2, Hand, ImageUp, MousePointer2, PenTool, Redo2, Undo2, ZoomIn, ZoomOut } from "lucide-react";
 import { DealSyncPanel } from "../features/plan-editor/components/DealSyncPanel";
 import { FurniturePalette } from "../features/plan-editor/components/FurniturePalette";
 import { InstallScreen } from "../features/plan-editor/components/InstallScreen";
@@ -198,12 +198,6 @@ export function App() {
     }
   };
 
-  const handleSave = async () => {
-    const snapshot = useEditorStore.getState().createSnapshot();
-    await localPlanRepository.save(snapshot);
-    saveWorkspace();
-  };
-
   const handleBackgroundUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !activePlan) return;
@@ -338,7 +332,6 @@ export function App() {
             { icon: ZoomIn, label: "Увеличить", onClick: zoomIn },
             { icon: ZoomOut, label: "Уменьшить", onClick: zoomOut },
             { icon: Download, label: "Скачать PNG", onClick: handleExportPng },
-            { icon: Save, label: "Сохранить JSON", tone: "primary", onClick: handleSave },
           ]}
         />
         <input ref={backgroundUploadRef} type="file" accept="image/png,image/jpeg" className="visually-hidden" onChange={handleBackgroundUpload} />
