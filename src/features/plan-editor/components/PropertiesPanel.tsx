@@ -13,7 +13,7 @@ import {
 } from "../../../shared/domain/project";
 import { statusLabels } from "../../../shared/domain/status";
 import { polygonArea } from "../../../shared/geometry/polygon";
-import { useFriezeDefaultLabel } from "../hooks/useFriezeDefaultLabel";
+import { useFriezeLabels } from "../hooks/useFriezeDefaultLabel";
 import { standStatuses, useEditorStore } from "../store/editorStore";
 import { PassportForm } from "./PassportForm";
 
@@ -81,7 +81,8 @@ export function PropertiesPanel() {
   const rotateFurniture = useEditorStore((state) => state.rotateFurniture);
   const updateFrieze = useEditorStore((state) => state.updateFrieze);
   const openStandPlan = useEditorStore((state) => state.openStandPlan);
-  const friezeDefaultLabel = useFriezeDefaultLabel();
+  const setStandFriezeText = useEditorStore((state) => state.setStandFriezeText);
+  const frieze = useFriezeLabels();
   const plan = useMemo(() => getFloorPlan(project, activeFloorPlanId), [activeFloorPlanId, project]);
   const object = useMemo(() => getCanvasObject(project, selectedObjectId), [project, selectedObjectId]);
   const stand = object && object.kind === "stand" ? getObjectStandMeta(object) : null;
@@ -118,16 +119,31 @@ export function PropertiesPanel() {
 
           {(furnitureItem.frieze || furnitureItem.film) && object.shape.kind === "rectangle" ? (
             <>
-              <label>
-                Надпись
-                <input
-                  value={furniture.label ?? ""}
-                  placeholder={furnitureItem.film ? "ОКЛЕЙКА" : friezeDefaultLabel || "ФРИЗ"}
-                  onChange={(event) => updateFrieze(object.id, { label: event.target.value })}
-                />
-              </label>
+              {furnitureItem.frieze && frieze.standObjectId ? (
+                // На площадке стенда надпись общая с анкетой паспорта: правка здесь меняет её там и на всех панелях.
+                <label>
+                  Надпись
+                  <input
+                    value={furniture.label ?? frieze.passportText}
+                    placeholder={frieze.fromDeal || "ФРИЗ"}
+                    onChange={(event) => setStandFriezeText(frieze.standObjectId!, event.target.value)}
+                  />
+                </label>
+              ) : (
+                <label>
+                  Надпись
+                  <input
+                    value={furniture.label ?? ""}
+                    placeholder={furnitureItem.film ? "ОКЛЕЙКА" : frieze.label || "ФРИЗ"}
+                    onChange={(event) => updateFrieze(object.id, { label: event.target.value })}
+                  />
+                </label>
+              )}
               {furnitureItem.frieze ? (
-                <FriezeLabelHint label={furniture.label ?? friezeDefaultLabel} custom={Boolean(furniture.label)} />
+                <>
+                  <FriezeLabelHint label={furniture.label ?? frieze.label} custom={Boolean(furniture.label ?? frieze.passportText.trim())} />
+                  {frieze.standObjectId ? <p className="stand-hint">Та же надпись — в анкете паспорта внизу панели.</p> : null}
+                </>
               ) : (
                 <p className="stand-hint">Например, цвет плёнки. Пусто — на плане будет «ОКЛЕЙКА».</p>
               )}

@@ -5,6 +5,7 @@ import { getFurnitureImageUrl, getFurnitureItem } from "../../../shared/domain/f
 import { getCanvasObject, getFloorPlan, getObjectStandMeta, getStandSizeMeters } from "../../../shared/domain/project";
 import { buildSpecification, formatNumber } from "../../../shared/domain/specification";
 import { renderPlanToDataUrl } from "../exportPlanImage";
+import { useFriezeDefaultLabel } from "../hooks/useFriezeDefaultLabel";
 import { useEditorStore } from "../store/editorStore";
 
 type Props = {
@@ -36,7 +37,12 @@ export function StandPassport({ onClose }: Props) {
   const dealId = standMeta?.dealId ?? crm.dealId;
 
   const [deal, setDeal] = useState<DealSummary | null>(null);
-  const values = useMemo(() => readPassportValues(standMeta?.passport), [standMeta]);
+  // Надпись на фризе та же, что на панелях: пустая анкета — из названия сделки.
+  const friezeLabel = useFriezeDefaultLabel();
+  const values = useMemo(
+    () => readPassportValues({ ...standMeta?.passport, friezeText: friezeLabel }),
+    [standMeta, friezeLabel],
+  );
   const [snapshot, setSnapshot] = useState<string | null>(null);
 
   // Снимок берётся с холста, поэтому делается один раз при открытии:

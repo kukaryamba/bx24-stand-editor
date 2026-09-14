@@ -123,6 +123,12 @@ type EditorState = {
    * вдоль панели; при повороте она остаётся длиной, а не шириной рамки.
    */
   updateFrieze: (objectId: string, patch: { label?: string; lengthPx?: number }) => void;
+  /**
+   * Надпись на фризе стенда — одна на стенд: и в анкете паспорта, и на панелях.
+   * Панели стенда сбрасывают свои прежние надписи, чтобы не расходиться
+   * с анкетой. Всё одним шагом истории.
+   */
+  setStandFriezeText: (standObjectId: string, text: string) => void;
   /** Переключает редактор между картой павильона и площадкой стенда. */
   showFloorPlanKind: (kind: FloorPlanKind) => void;
   /** Открывает площадку выбранного стенда, при необходимости заводит её. */
@@ -450,6 +456,27 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     commitProject(set, get, {
       ...project,
       objects: project.objects.map((item) => (item.id === objectId ? nextObject : item)),
+    });
+  },
+  setStandFriezeText: (standObjectId, text) => {
+    const project = get().project;
+    const stand = getCanvasObject(project, standObjectId);
+    const standMeta = stand ? getObjectStandMeta(stand) : null;
+    if (!project || !stand || !standMeta) return;
+
+    const standPlanIds = new Set(project.floorPlans.filter((plan) => plan.standObjectId === standObjectId).map((plan) => plan.id));
+
+    commitProject(set, get, {
+      ...project,
+      objects: project.objects.map((item) => {
+        if (item.id === standObjectId) {
+          return { ...item, meta: { ...item.meta, stand: { ...standMeta, passport: { ...standMeta.passport, friezeText: text } } } };
+        }
+
+        const furniture = getObjectFurnitureMeta(item);
+        if (!furniture?.label || !standPlanIds.has(item.floorPlanId) || !getFurnitureItem(furniture.itemId)?.frieze) return item;
+        return { ...item, meta: { ...item.meta, furniture: { ...furniture, label: undefined } } };
+      }),
     });
   },
   rotateFurniture: (objectId) => {

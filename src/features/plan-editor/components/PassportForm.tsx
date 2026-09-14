@@ -1,5 +1,6 @@
 import { passportSlots } from "../../../shared/crm/passportFields";
 import { friezeMaxChars, getCanvasObject, getObjectStandMeta } from "../../../shared/domain/project";
+import { useFriezeLabels } from "../hooks/useFriezeDefaultLabel";
 import { useEditorStore } from "../store/editorStore";
 
 /**
@@ -16,15 +17,34 @@ import { useEditorStore } from "../store/editorStore";
 /** Ограничение прайса: не более 15 символов на фризовой панели. */
 const friezeLimit = friezeMaxChars;
 
+function FriezeCount({ text, fromDeal }: { text: string; fromDeal: boolean }) {
+  const count = Array.from(text).length;
+  return (
+    <span className={count > friezeLimit ? "passport-form__over" : "passport-form__count"}>
+      Знаков: {count} из {friezeLimit}
+      {count > friezeLimit ? " — больше, чем помещается на панели" : ""}
+      {fromDeal ? ". Пока взято из названия сделки" : ""}
+      . Эта же надпись — на фризе стенда.
+    </span>
+  );
+}
+
 export function PassportForm({ standObjectId }: { standObjectId: string }) {
   const project = useEditorStore((state) => state.project);
   const updateStand = useEditorStore((state) => state.updateStand);
+  const setStandFriezeText = useEditorStore((state) => state.setStandFriezeText);
+  const frieze = useFriezeLabels();
 
   const stand = getCanvasObject(project, standObjectId);
   const meta = stand ? getObjectStandMeta(stand) : null;
   const answers = meta?.passport ?? {};
 
   const change = (slotId: string, value: string) => {
+    // Надпись на фризе общая с панелями на площадке — меняется вместе с ними.
+    if (slotId === "friezeText") {
+      setStandFriezeText(standObjectId, value);
+      return;
+    }
     updateStand(standObjectId, { passport: { [slotId]: value } });
   };
 
@@ -49,14 +69,15 @@ export function PassportForm({ standObjectId }: { standObjectId: string }) {
                 <option value="Нет">Нет</option>
               </select>
             ) : (
-              <input value={value} onChange={(event) => change(slot.id, event.target.value)} />
+              <input
+                value={value}
+                placeholder={isFrieze ? frieze.fromDeal : undefined}
+                onChange={(event) => change(slot.id, event.target.value)}
+              />
             )}
 
-            {isFrieze && value ? (
-              <span className={value.length > friezeLimit ? "passport-form__over" : "passport-form__count"}>
-                Знаков: {value.length} из {friezeLimit}
-                {value.length > friezeLimit ? " — больше, чем помещается на панели" : ""}
-              </span>
+            {isFrieze && (value || frieze.fromDeal) ? (
+              <FriezeCount text={value || frieze.fromDeal} fromDeal={!value} />
             ) : null}
           </label>
         );
