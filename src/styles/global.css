@@ -1098,6 +1098,12 @@ p {
   resize: vertical;
 }
 
+/* Знаки надписи фриза сверх пятнадцати. */
+.frieze-extra {
+  color: #d93025;
+  font-weight: 700;
+}
+
 .stand-hint {
   margin: -6px 0 0;
   color: #6b7280;

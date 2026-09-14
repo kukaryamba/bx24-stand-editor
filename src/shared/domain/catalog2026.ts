@@ -22,7 +22,7 @@ export const priceCatalog2026: FurnitureItem[] = [
   // Фриз вешают над открытой стороной стенда, в том числе над проходом за его
   // границей. Артикула в форме заказа нет, считается погонными метрами.
   // Добавлен вручную, мимо генератора каталога.
-  { id: "friz-panel", catalogId: "", title: "Фризовая панель", category: "walls", widthM: 1, depthM: 0.2, image: "friz-panel.svg", source: "price2026", frieze: true },
+  { id: "friz-panel", catalogId: "", title: "Фризовая панель", category: "walls", widthM: 1, depthM: 0.3, image: "friz-panel.svg", source: "price2026", frieze: true },
   { id: "polka-1x03", catalogId: "115", title: "Полка ЛДСП 1 x 0,3 м", category: "storage", widthM: 1, depthM: 0.3, image: "polka-1x03.svg", source: "price2026" },
   { id: "polka-1x05", catalogId: "", title: "Полка ЛДСП 1 x 0,5 м", category: "storage", widthM: 1, depthM: 0.5, image: "polka-1x05.svg", source: "price2026" },
   { id: "polka-naklonnaya", catalogId: "", title: "Полка ЛДСП наклонная 1 x 0,3 м", category: "storage", widthM: 1, depthM: 0.3, image: "polka-naklonnaya.svg", source: "price2026" },

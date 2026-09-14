@@ -2,11 +2,48 @@ import { ExternalLink, LayoutGrid, Trash2 } from "lucide-react";
 import { dealUrl } from "../../../shared/crm/bitrixApi";
 import { useMemo } from "react";
 import { getFurnitureItem } from "../../../shared/domain/furniture";
-import { getCanvasObject, getFloorPlan, getObjectFurnitureMeta, getObjectPoints, getObjectStandMeta } from "../../../shared/domain/project";
+import {
+  friezeMaxChars,
+  getCanvasObject,
+  getFloorPlan,
+  getObjectFurnitureMeta,
+  getObjectPoints,
+  getObjectStandMeta,
+  splitFriezeLabel,
+} from "../../../shared/domain/project";
 import { statusLabels } from "../../../shared/domain/status";
 import { polygonArea } from "../../../shared/geometry/polygon";
+import { useFriezeDefaultLabel } from "../hooks/useFriezeDefaultLabel";
 import { standStatuses, useEditorStore } from "../store/editorStore";
 import { PassportForm } from "./PassportForm";
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/**
+ * Подсказка под надписью фриза: сколько знаков и что не помещается.
+ * В поле ввода часть текста красным не выделить, поэтому лишнее
+ * показывается здесь, как и на самой панели.
+ */
+function FriezeLabelHint({ label, custom }: { label: string; custom: boolean }) {
+  const { fits, extra } = splitFriezeLabel(label);
+  const count = Array.from(label).length;
+
+  return (
+    <p className="stand-hint">
+      {extra ? (
+        <>
+          Знаков {count} из {friezeMaxChars}: {fits}
+          <span className="frieze-extra">{extra}</span> — лишнее красным.
+        </>
+      ) : (
+        <>Знаков {count} из {friezeMaxChars}.</>
+      )}{" "}
+      {custom ? "Сотрите, чтобы снова брать надпись из названия сделки." : "Пока взята из названия сделки до слова «стенд»."}
+    </p>
+  );
+}
 
 /**
  * Переход в сделку стенда — в новой вкладке, чтобы не терять план.
@@ -42,7 +79,9 @@ export function PropertiesPanel() {
   const updateStand = useEditorStore((state) => state.updateStand);
   const deleteObject = useEditorStore((state) => state.deleteObject);
   const rotateFurniture = useEditorStore((state) => state.rotateFurniture);
+  const updateFrieze = useEditorStore((state) => state.updateFrieze);
   const openStandPlan = useEditorStore((state) => state.openStandPlan);
+  const friezeDefaultLabel = useFriezeDefaultLabel();
   const plan = useMemo(() => getFloorPlan(project, activeFloorPlanId), [activeFloorPlanId, project]);
   const object = useMemo(() => getCanvasObject(project, selectedObjectId), [project, selectedObjectId]);
   const stand = object && object.kind === "stand" ? getObjectStandMeta(object) : null;
@@ -50,6 +89,7 @@ export function PropertiesPanel() {
   const furnitureItem = furniture ? getFurnitureItem(furniture.itemId) : undefined;
 
   const area = stand && plan && object ? polygonArea(getObjectPoints(object), plan.grid.metersPerCell, plan.grid.cellSizePx) : 0;
+  const pxPerMeter = plan ? plan.grid.cellSizePx / plan.grid.metersPerCell : 1;
 
   return (
     <aside className="right-panel" aria-label="Панель свойств">
@@ -76,6 +116,35 @@ export function PropertiesPanel() {
         <div className="property-form">
           <h2>Предмет</h2>
 
+          {furnitureItem.frieze && object.shape.kind === "rectangle" ? (
+            <>
+              <label>
+                Надпись
+                <input
+                  value={furniture.label ?? ""}
+                  placeholder={friezeDefaultLabel || "ФРИЗ"}
+                  onChange={(event) => updateFrieze(object.id, { label: event.target.value })}
+                />
+              </label>
+              <FriezeLabelHint label={furniture.label ?? friezeDefaultLabel} custom={Boolean(furniture.label)} />
+
+              <label>
+                Длина, м
+                <input
+                  type="number"
+                  min={0.5}
+                  step={0.5}
+                  value={round2(object.shape.width / pxPerMeter)}
+                  onChange={(event) => {
+                    const meters = Number(event.target.value);
+                    if (meters > 0) updateFrieze(object.id, { lengthPx: meters * pxPerMeter });
+                  }}
+                />
+              </label>
+              <p className="stand-hint">Или потяните за кружок на конце панели.</p>
+            </>
+          ) : null}
+
           <dl className="stand-facts">
             <div>
               <dt>Название</dt>
@@ -84,7 +153,9 @@ export function PropertiesPanel() {
             <div>
               <dt>Размер</dt>
               <dd>
-                {String(furnitureItem.widthM).replace(".", ",")} x {String(furnitureItem.depthM).replace(".", ",")} м
+                {furnitureItem.frieze && object.shape.kind === "rectangle"
+                  ? `${String(round2(object.shape.width / pxPerMeter)).replace(".", ",")} м в длину`
+                  : `${String(furnitureItem.widthM).replace(".", ",")} x ${String(furnitureItem.depthM).replace(".", ",")} м`}
               </dd>
             </div>
             <div>

@@ -118,6 +118,11 @@ type EditorState = {
   addFurniture: (itemId: string, position: Point) => void;
   moveFurniture: (objectId: string, origin: Point) => void;
   rotateFurniture: (objectId: string) => void;
+  /**
+   * Меняет надпись и длину фризовой панели. Длина — в пикселях плана,
+   * вдоль панели; при повороте она остаётся длиной, а не шириной рамки.
+   */
+  updateFrieze: (objectId: string, patch: { label?: string; lengthPx?: number }) => void;
   /** Переключает редактор между картой павильона и площадкой стенда. */
   showFloorPlanKind: (kind: FloorPlanKind) => void;
   /** Открывает площадку выбранного стенда, при необходимости заводит её. */
@@ -421,6 +426,27 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (!project || !object || object.shape.kind !== "rectangle") return;
 
     const nextObject: CanvasObject = { ...object, shape: { ...object.shape, origin } };
+    commitProject(set, get, {
+      ...project,
+      objects: project.objects.map((item) => (item.id === objectId ? nextObject : item)),
+    });
+  },
+  updateFrieze: (objectId, patch) => {
+    const project = get().project;
+    const object = getCanvasObject(project, objectId);
+    const meta = object ? getObjectFurnitureMeta(object) : null;
+    if (!project || !object || !meta || object.shape.kind !== "rectangle") return;
+
+    const nextObject: CanvasObject = {
+      ...object,
+      shape: patch.lengthPx === undefined ? object.shape : { ...object.shape, width: Math.max(1, patch.lengthPx) },
+      meta: {
+        ...object.meta,
+        // Пустую надпись храним как «не задана»: тогда снова берётся из сделки.
+        furniture: patch.label === undefined ? meta : { ...meta, label: patch.label.trim() === "" ? undefined : patch.label },
+      },
+    };
+
     commitProject(set, get, {
       ...project,
       objects: project.objects.map((item) => (item.id === objectId ? nextObject : item)),

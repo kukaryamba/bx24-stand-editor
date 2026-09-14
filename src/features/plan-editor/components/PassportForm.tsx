@@ -1,5 +1,5 @@
 import { passportSlots } from "../../../shared/crm/passportFields";
-import { getCanvasObject, getObjectStandMeta } from "../../../shared/domain/project";
+import { friezeMaxChars, getCanvasObject, getObjectStandMeta } from "../../../shared/domain/project";
 import { useEditorStore } from "../store/editorStore";
 
 /**
@@ -14,7 +14,7 @@ import { useEditorStore } from "../store/editorStore";
  */
 
 /** Ограничение прайса: не более 15 символов на фризовой панели. */
-const friezeLimit = 15;
+const friezeLimit = friezeMaxChars;
 
 export function PassportForm({ standObjectId }: { standObjectId: string }) {
   const project = useEditorStore((state) => state.project);

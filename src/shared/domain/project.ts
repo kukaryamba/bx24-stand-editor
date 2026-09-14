@@ -86,6 +86,27 @@ export function isWallObject(object: CanvasObject): boolean {
   return getFurnitureItem(meta.itemId)?.category === "walls";
 }
 
+/** Сколько знаков помещается на фризовой панели — ограничение прайса. */
+export const friezeMaxChars = 15;
+
+/**
+ * Надпись фриза, разделённая на то, что помещается, и лишнее.
+ * Лишнее показывают красным, а не обрезают: так видно, сколько сократить.
+ */
+export function splitFriezeLabel(label: string): { fits: string; extra: string } {
+  // Array.from, а не slice: иначе составные символы вроде эмодзи рвались бы пополам.
+  const chars = Array.from(label);
+  return { fits: chars.slice(0, friezeMaxChars).join(""), extra: chars.slice(friezeMaxChars).join("") };
+}
+
+/** Фризовая панель — растягивается в длину и несёт надпись. */
+export function isFriezeObject(object: CanvasObject): boolean {
+  const meta = getObjectFurnitureMeta(object);
+  if (!meta) return false;
+
+  return getFurnitureItem(meta.itemId)?.frieze === true;
+}
+
 /**
  * Стенд, закреплённый за сделкой.
  *

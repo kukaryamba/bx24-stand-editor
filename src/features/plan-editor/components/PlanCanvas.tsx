@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type Konva from "konva";
+import Konva from "konva";
 import { Circle, Group, Image, Layer, Line, Rect, Stage, Text } from "react-konva";
 import { getFurnitureImageUrl, getFurnitureItem } from "../../../shared/domain/furniture";
-import { getCanvasObject, getFloorPlan, getFloorPlanLayers, getFloorPlanObjects, getObjectFurnitureMeta, getObjectPoints, getObjectStandMeta, isWallObject } from "../../../shared/domain/project";
+import { getCanvasObject, getFloorPlan, getFloorPlanLayers, getFloorPlanObjects, getObjectFurnitureMeta, getObjectPoints, getObjectStandMeta, isFriezeObject, isWallObject, splitFriezeLabel } from "../../../shared/domain/project";
 import { currentDealColor, statusColors } from "../../../shared/domain/status";
 import type { CanvasObject, Point } from "../../../shared/domain/types";
 import { flattenPoints, polygonArea, polygonCentroid, snapPoint } from "../../../shared/geometry/polygon";
 import { maxScale, minScale, useEditorStore } from "../store/editorStore";
+import { useFriezeDefaultLabel } from "../hooks/useFriezeDefaultLabel";
 import { useImage } from "../hooks/useImage";
 import { registerStage } from "../stageRegistry";
 
@@ -39,6 +40,8 @@ export function PlanCanvas() {
   const selectObjects = useEditorStore((state) => state.selectObjects);
   const deleteObjects = useEditorStore((state) => state.deleteObjects);
   const selectedObjectIds = useEditorStore((state) => state.selectedObjectIds);
+  const updateFrieze = useEditorStore((state) => state.updateFrieze);
+  const friezeDefaultLabel = useFriezeDefaultLabel();
   const updateStand = useEditorStore((state) => state.updateStand);
   const moveFurniture = useEditorStore((state) => state.moveFurniture);
   const rotateFurniture = useEditorStore((state) => state.rotateFurniture);
@@ -142,6 +145,8 @@ export function PlanCanvas() {
   const standObjects = visibleObjects.filter((object) => object.kind === "stand");
   const furnitureObjects = visibleObjects.filter((object) => object.kind === "equipment");
   const gridOffset: Point = { x: floorPlan.grid.offsetX ?? 0, y: floorPlan.grid.offsetY ?? 0 };
+  // Длина фриза цепляется к полуметру: стенды и стены меряют в тех же шагах.
+  const friezeStepPx = (floorPlan.grid.cellSizePx / floorPlan.grid.metersPerCell) * 0.5;
   const gridLines = floorPlan.grid.enabled ? createGridLines(floorPlan.width, floorPlan.height, floorPlan.grid.cellSizePx, gridOffset) : [];
 
   /** Точка под курсором в координатах плана, без привязки к сетке. */
@@ -344,15 +349,28 @@ export function PlanCanvas() {
             />
           ))}
 
-          {furnitureObjects.map((object) => (
-            <FurnitureShape
-              key={object.id}
-              object={object}
-              selected={selectedObjectIds.includes(object.id)}
-              onSelect={(additive) => selectObject(object.id, additive)}
-              onDragEnd={(event) => handleFurnitureDragEnd(object, event)}
-            />
-          ))}
+          {furnitureObjects.map((object) =>
+            isFriezeObject(object) ? (
+              <FriezeShape
+                key={object.id}
+                object={object}
+                selected={selectedObjectIds.includes(object.id)}
+                defaultLabel={friezeDefaultLabel}
+                lengthStepPx={friezeStepPx}
+                onSelect={(additive) => selectObject(object.id, additive)}
+                onDragEnd={(event) => handleFurnitureDragEnd(object, event)}
+                onResize={(lengthPx) => updateFrieze(object.id, { lengthPx })}
+              />
+            ) : (
+              <FurnitureShape
+                key={object.id}
+                object={object}
+                selected={selectedObjectIds.includes(object.id)}
+                onSelect={(additive) => selectObject(object.id, additive)}
+                onDragEnd={(event) => handleFurnitureDragEnd(object, event)}
+              />
+            ),
+          )}
 
           {selectedObject && selectedObject.kind === "stand" && mode === "admin"
             ? getObjectPoints(selectedObject).map((point, index) => (
@@ -498,6 +516,124 @@ function FurnitureShape({ object, selected, onSelect, onDragEnd }: FurnitureShap
           listening={false}
         />
       ) : null}
+    </Group>
+  );
+}
+
+type FriezeShapeProps = {
+  object: CanvasObject;
+  selected: boolean;
+  /** Надпись, если в панели своя не задана, — из названия сделки. */
+  defaultLabel: string;
+  /** Шаг, к которому цепляется длина при растягивании, в пикселях плана. */
+  lengthStepPx: number;
+  onSelect: (additive: boolean) => void;
+  onDragEnd: (event: Konva.KonvaEventObject<DragEvent>) => void;
+  onResize: (lengthPx: number) => void;
+};
+
+/**
+ * Фризовая панель: растягивается в длину, а надпись остаётся прежнего размера.
+ *
+ * Картинку каталога для фриза использовать нельзя — при растягивании
+ * растянулись бы и буквы. Поэтому панель рисуется прямоугольником, а надпись —
+ * отдельным текстом, высота которого зависит только от толщины панели.
+ *
+ * Всё рисуется в группе, повёрнутой вместе с панелью, поэтому ручка длины
+ * у повёрнутой панели сама оказывается на её конце.
+ */
+function FriezeShape({ object, selected, defaultLabel, lengthStepPx, onSelect, onDragEnd, onResize }: FriezeShapeProps) {
+  const meta = getObjectFurnitureMeta(object);
+  if (object.shape.kind !== "rectangle" || !meta) return null;
+
+  const { origin, width: length, height: depth } = object.shape;
+  const shift = imageShift(meta.rotation, length, depth);
+  const label = meta.label ?? (defaultLabel || "ФРИЗ");
+  // Перевёрнутая надпись не читается — у панели, развёрнутой на 180 и 270
+  // градусов, текст разворачиваем обратно.
+  const flipText = meta.rotation === 180 || meta.rotation === 270;
+  const handleRadius = Math.max(6, depth * 0.45);
+
+  return (
+    <Group
+      x={origin.x}
+      y={origin.y}
+      draggable
+      onClick={(event) => onSelect(event.evt.ctrlKey || event.evt.metaKey)}
+      onTap={() => onSelect(false)}
+      onDragEnd={onDragEnd}
+    >
+      <Group x={shift.x} y={shift.y} rotation={meta.rotation}>
+        <Rect
+          width={length}
+          height={depth}
+          fill={selected ? "#d2e3fc" : "#dceaf6"}
+          stroke={selected ? "#0b57d0" : "#5b6674"}
+          strokeWidth={selected ? 2.5 : 1.5}
+        />
+        <FriezeLabel label={label} length={length} depth={depth} flip={flipText} />
+
+        {selected ? (
+          <Circle
+            x={length}
+            y={depth / 2}
+            radius={handleRadius}
+            fill="#ffffff"
+            stroke="#0b57d0"
+            strokeWidth={2.5}
+            draggable
+            onMouseDown={(event) => {
+              // Иначе нажатие на ручку потащило бы всю панель.
+              event.cancelBubble = true;
+            }}
+            onDragMove={(event) => {
+              event.cancelBubble = true;
+              // Ручка ходит только вдоль панели.
+              event.target.y(depth / 2);
+              event.target.x(Math.max(lengthStepPx, event.target.x()));
+            }}
+            onDragEnd={(event) => {
+              event.cancelBubble = true;
+              const raw = Math.max(lengthStepPx, event.target.x());
+              const snapped = Math.max(lengthStepPx, Math.round(raw / lengthStepPx) * lengthStepPx);
+              // Возвращаем ручку на место: новую длину нарисует уже обновлённая панель.
+              event.target.position({ x: length, y: depth / 2 });
+              onResize(snapped);
+            }}
+          />
+        ) : null}
+      </Group>
+    </Group>
+  );
+}
+
+/**
+ * Надпись фриза: первые 15 знаков тёмным, лишние — красным.
+ *
+ * Konva не красит часть строки другим цветом, поэтому надпись рисуется двумя
+ * кусками, а ширина каждого измеряется, чтобы вместе они стояли по центру.
+ * Если надпись длиннее панели, шрифт уменьшается — буквы не растягиваются
+ * и не вылезают за край.
+ */
+function FriezeLabel({ label, length, depth, flip }: { label: string; length: number; depth: number; flip: boolean }) {
+  const { fits, extra } = splitFriezeLabel(label);
+  const baseSize = depth * 0.62;
+
+  const measure = (text: string, size: number) =>
+    text ? new Konva.Text({ text, fontSize: size, fontStyle: "bold" }).getTextWidth() : 0;
+
+  const naturalWidth = measure(fits, baseSize) + measure(extra, baseSize);
+  const available = length * 0.92;
+  const fontSize = naturalWidth > available ? baseSize * (available / naturalWidth) : baseSize;
+
+  const fitsWidth = measure(fits, fontSize);
+  const total = fitsWidth + measure(extra, fontSize);
+
+  return (
+    // Центр группы — центр панели: так надпись переворачивается на месте.
+    <Group x={length / 2} y={depth / 2} rotation={flip ? 180 : 0} listening={false}>
+      <Text x={-total / 2} y={-fontSize / 2} text={fits} fontSize={fontSize} fontStyle="bold" fill="#253141" />
+      {extra ? <Text x={-total / 2 + fitsWidth} y={-fontSize / 2} text={extra} fontSize={fontSize} fontStyle="bold" fill="#d93025" /> : null}
     </Group>
   );
 }

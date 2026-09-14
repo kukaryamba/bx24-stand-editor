@@ -17,20 +17,29 @@ export function buildSpecification(project: ExhibitionProject | null, floorPlanI
   const objects = getFloorPlanObjects(project, floorPlanId).filter((object) => object.kind === "equipment");
 
   const counts = new Map<string, number>();
+  // Фриз растягивается, поэтому его считаем не штуками, а настоящей длиной.
+  const pxPerMeter = plan ? plan.grid.cellSizePx / plan.grid.metersPerCell : 1;
+  let friezeLengthM = 0;
+
   for (const object of objects) {
     const meta = getObjectFurnitureMeta(object);
     if (!meta) continue;
     counts.set(meta.itemId, (counts.get(meta.itemId) ?? 0) + 1);
+
+    if (getFurnitureItem(meta.itemId)?.frieze && object.shape.kind === "rectangle") {
+      friezeLengthM += object.shape.width / pxPerMeter;
+    }
   }
 
   const rows: SpecificationRow[] = [];
   let wallLengthM = 0;
-  let friezeLengthM = 0;
 
-  for (const [itemId, quantity] of counts) {
+  for (const [itemId, count] of counts) {
     const item = getFurnitureItem(itemId);
     if (!item) continue;
 
+    // Фриз заказывают погонными метрами, остальное — штуками.
+    const quantity = item.frieze ? round1(friezeLengthM) : count;
     const priceRub = item.priceRub;
     rows.push({
       itemId,
@@ -38,14 +47,13 @@ export function buildSpecification(project: ExhibitionProject | null, floorPlanI
       title: item.title,
       category: item.category,
       quantity,
-      unit: "шт",
+      unit: item.frieze ? "м" : "шт",
       priceRub,
       sumRub: priceRub === undefined ? undefined : priceRub * quantity,
     });
 
     if (item.frieze) {
-      // Фриз заказывают погонными метрами, отдельно от стен.
-      friezeLengthM += item.widthM * quantity;
+      // Длина фриза уже посчитана по объектам, к стенам его не добавляем.
     } else if (item.category === "walls") {
       // У стеновых панелей длина — это их ширина по плану.
       wallLengthM += item.widthM * quantity;
