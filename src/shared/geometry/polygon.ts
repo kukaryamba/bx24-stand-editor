@@ -92,6 +92,16 @@ export function flattenPoints(points: Point[]): number[] {
   return points.flatMap((point) => [point.x, point.y]);
 }
 
+/**
+ * Накладываются ли площадки друг на друга.
+ *
+ * Общая стена или общий угол — не наложение: стенды на выставке стоят
+ * вплотную, ряд за рядом. Поэтому касание границ не считается, а считается
+ * только общая площадь: рёбра пересекаются крест-накрест, или вершина,
+ * середина ребра, внутренняя точка одного стенда лежит строго внутри другого.
+ * Последние проверки ловят наложения без пересечения рёбер — когда стенд
+ * сдвинут вдоль общей линии или совпадает с другим.
+ */
 function polygonsIntersect(first: Point[], second: Point[]): boolean {
   for (let i = 0; i < first.length; i += 1) {
     const a = first[i];
@@ -100,11 +110,52 @@ function polygonsIntersect(first: Point[], second: Point[]): boolean {
     for (let j = 0; j < second.length; j += 1) {
       const c = second[j];
       const d = second[(j + 1) % second.length];
-      if (segmentsIntersect(a, b, c, d)) return true;
+      if (segmentsCrossProperly(a, b, c, d)) return true;
     }
   }
 
-  return pointInPolygon(first[0], second) || pointInPolygon(second[0], first);
+  return samplePoints(first).some((point) => strictlyInside(point, second)) || samplePoints(second).some((point) => strictlyInside(point, first));
+}
+
+/** Рёбра пересекаются крест-накрест, а не касаются концом или лежат на одной линии. */
+function segmentsCrossProperly(a: Point, b: Point, c: Point, d: Point): boolean {
+  const o1 = orientation(a, b, c);
+  const o2 = orientation(a, b, d);
+  const o3 = orientation(c, d, a);
+  const o4 = orientation(c, d, b);
+  return o1 !== 0 && o2 !== 0 && o3 !== 0 && o4 !== 0 && o1 !== o2 && o3 !== o4;
+}
+
+/** Вершины, середины рёбер и внутренняя точка — чем проверять наложение. */
+function samplePoints(polygon: Point[]): Point[] {
+  const points = [...polygon];
+  for (let i = 0; i < polygon.length; i += 1) {
+    const next = polygon[(i + 1) % polygon.length];
+    points.push({ x: (polygon[i].x + next.x) / 2, y: (polygon[i].y + next.y) / 2 });
+  }
+
+  // Центр тяжести у вогнутого контура бывает снаружи — тогда он не годится.
+  const centroid = polygonCentroid(polygon);
+  if (strictlyInside(centroid, polygon)) points.push(centroid);
+  return points;
+}
+
+/** Допуск касания, пиксели плана: координаты с сеткой в дробных пикселях. */
+const touchTolerancePx = 0.01;
+
+function strictlyInside(point: Point, polygon: Point[]): boolean {
+  for (let i = 0; i < polygon.length; i += 1) {
+    if (distanceToSegment(point, polygon[i], polygon[(i + 1) % polygon.length]) <= touchTolerancePx) return false;
+  }
+  return pointInPolygon(point, polygon);
+}
+
+function distanceToSegment(point: Point, a: Point, b: Point): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lengthSquared = dx * dx + dy * dy;
+  const t = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSquared));
+  return Math.hypot(point.x - (a.x + t * dx), point.y - (a.y + t * dy));
 }
 
 function segmentsIntersect(a: Point, b: Point, c: Point, d: Point): boolean {
