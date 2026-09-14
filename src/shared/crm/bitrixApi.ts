@@ -229,20 +229,28 @@ export async function bindDealTab(title: string): Promise<"bound" | "rebound" | 
  * Точную высоту окна портала измерить нельзя — оно на другом домене, поэтому
  * отталкиваемся от высоты экрана, оставляя запас на шапку и карточку сделки.
  */
-export function stretchAppWindow(contentHeight = 0): void {
+export function stretchAppWindow(chrome = portalChrome): void {
   const resize = window.BX24?.resizeWindow?.bind(window.BX24);
   if (!resize) return;
 
-  // Страница длиннее экрана (экран установки) — рамка растёт под неё,
-  // иначе низ обрезается, а прокручивает уже сам портал.
-  const height = Math.max(minAppHeight, window.screen.availHeight - portalChrome, Math.ceil(contentHeight));
-  resize(document.documentElement.clientWidth || 1200, height);
+  const height = Math.max(minAppHeight, window.screen.availHeight - chrome);
+  // innerWidth, а не clientWidth: тот без полосы прокрутки, и рамка
+  // с каждым запросом становилась бы уже на её ширину.
+  resize(window.innerWidth || 1200, height);
 }
+
+/**
+ * Запас для окна из списка интеграций: там нет карточки сделки, только шапка
+ * браузера. Высота постоянная, а длинное содержимое прокручивается внутри —
+ * подгонка рамки под содержимое раскачивала окно: портал добавлял свою
+ * прокрутку, ширина менялась, карточка перестраивалась, и всё по кругу.
+ */
+export const sliderChrome = 70;
 
 /** Ниже этого редактором пользоваться неудобно. */
 const minAppHeight = 700;
 /** Запас на шапку портала, вкладки карточки и панель задач. */
-const portalChrome = 260;
+export const portalChrome = 260;
 
 /**
  * Адрес портала. Библиотека знает его после запуска, а до того — и вне

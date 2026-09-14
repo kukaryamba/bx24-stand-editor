@@ -1,6 +1,6 @@
-﻿import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { BackupPanel } from "./BackupPanel";
-import { appHandlerUrl, bindDealTab, finishInstall, stretchAppWindow } from "../../../shared/crm/bitrixApi";
+import { appHandlerUrl, bindDealTab, finishInstall } from "../../../shared/crm/bitrixApi";
 import { getAllowedCategory, listDealCategories, setAllowedCategory, type DealCategory } from "../../../shared/crm/dealCategory";
 
 /**
@@ -32,19 +32,6 @@ type InstallScreenProps = {
 export function InstallScreen({ onContinue }: InstallScreenProps) {
   const [state, setState] = useState<InstallState>({ kind: "working" });
   const [attempt, setAttempt] = useState(0);
-  const cardRef = useRef<HTMLDivElement | null>(null);
-
-  // Карточка растёт по мере загрузки воронок и списка копий — рамка портала следом.
-  useEffect(() => {
-    const card = cardRef.current;
-    if (!card || typeof ResizeObserver === "undefined") return;
-
-    // 64 — отступы экрана сверху и снизу.
-    const fit = () => stretchAppWindow(card.getBoundingClientRect().height + 64);
-    const observer = new ResizeObserver(fit);
-    observer.observe(card);
-    return () => observer.disconnect();
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,7 +59,7 @@ export function InstallScreen({ onContinue }: InstallScreenProps) {
 
   return (
     <div className="install-screen">
-      <div className="install-card" ref={cardRef}>
+      <div className="install-card">
         <h1>Редактор планов стендов</h1>
 
         {state.kind === "working" ? <p>Встраиваю приложение в карточку сделки...</p> : null}

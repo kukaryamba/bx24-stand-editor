@@ -20,7 +20,17 @@ import { defaultStandSizeM, findStandByDeal, formatMeters, getFloorPlan, getFloo
 import { cropImage, detectGridStep } from "../shared/geometry/detectGrid";
 import { uploadPlanImage } from "../shared/storage/planUpload";
 import { standTemplates } from "../shared/domain/standTemplates";
-import { dealTabPlacement, stretchAppWindow } from "../shared/crm/bitrixApi";
+import { dealTabPlacement, portalChrome, sliderChrome, stretchAppWindow } from "../shared/crm/bitrixApi";
+
+/**
+ * Запас по высоте рамки: во вкладке сделки над приложением карточка,
+ * а окно из списка интеграций открывается без неё. Считать обязательно
+ * одинаково при запуске и при изменении размера — иначе два расчёта
+ * спорят, и рамка дёргается.
+ */
+function windowChrome(placement: string | null | undefined): number {
+  return placement === dealTabPlacement ? portalChrome : sliderChrome;
+}
 import { bitrixCrmProvider } from "../shared/crm/bitrixCrmProvider";
 import { loadExpoPlan, mergeWithLocalBackgrounds, saveExpoPlan, stripForPortal } from "../shared/crm/expoPlanRepository";
 import type { EditorScreen } from "../shared/domain/types";
@@ -112,7 +122,7 @@ export function App() {
 
       // Портал даёт встроенному приложению невысокую полосу — просим больше,
       // иначе панели уходят во внутреннюю прокрутку.
-      stretchAppWindow();
+      stretchAppWindow(windowChrome(context.placement));
 
       try {
         const portal = await loadExpoPlan();
@@ -158,10 +168,10 @@ export function App() {
   useEffect(() => {
     if (crm.provider !== "bitrix24") return;
 
-    const onResize = () => stretchAppWindow();
+    const onResize = () => stretchAppWindow(windowChrome(crm.placement));
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [crm.provider]);
+  }, [crm.provider, crm.placement]);
 
   // Автосохранение в портал. Отдельно от локального: там isDirty гасится
   // через полсекунды, и таймер портала не успевал бы сработать.
