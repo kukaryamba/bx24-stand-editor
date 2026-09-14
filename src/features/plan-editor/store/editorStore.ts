@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { getFurnitureItem } from "../../../shared/domain/furniture";
-import { buildTemplateWalls, standTemplates, type StandTemplateId } from "../../../shared/domain/standTemplates";
+import { buildTemplateWalls, rotateTemplate, standTemplates, templateVariants, type StandTemplateId } from "../../../shared/domain/standTemplates";
 import {
   createStandFloorPlan,
   defaultStandSizeM,
@@ -58,6 +58,8 @@ const standFitZoom = 0.8;
 
 type EditorState = {
   project: ExhibitionProject | null;
+  /** Последняя применённая схема стенда — чтобы повторное нажатие поворачивало её. */
+  lastTemplate: { floorPlanId: string; templateId: StandTemplateId; turns: number } | null;
   activeFloorPlanId: string | null;
   /** Стенд, площадка которого сейчас открыта. */
   activeStandObjectId: string | null;
@@ -161,6 +163,7 @@ const defaultStageSize: StageSize = { width: 1100, height: 760 };
 
 export const useEditorStore = create<EditorState>((set, get) => ({
   project: null,
+  lastTemplate: null,
   activeFloorPlanId: null,
   activeStandObjectId: null,
   selectedObjectId: null,
@@ -683,8 +686,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const template = standTemplates.find((item) => item.id === templateId);
     if (!project || !plan || plan.kind !== "stand" || !template) return;
 
+    // Повторное нажатие той же схемы на той же площадке — следующий поворот.
+    const last = state.lastTemplate;
+    const turns =
+      last && last.floorPlanId === plan.id && last.templateId === templateId ? (last.turns + 1) % templateVariants(template) : 0;
+
     const layerId = getLayerId(project, plan.id, "stands");
-    const walls = buildTemplateWalls(template, plan, layerId, createId);
+    const walls = buildTemplateWalls(rotateTemplate(template, turns), plan, layerId, createId);
 
     // Прежние стены заменяются, остальная мебель остаётся на месте.
     const kept = project.objects.filter((object) => {
@@ -695,7 +703,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
 
     commitProject(set, get, { ...project, objects: [...kept, ...walls] });
-    set({ selectedObjectId: null, selectedObjectIds: [], validationMessage: null });
+    set({
+      selectedObjectId: null,
+      selectedObjectIds: [],
+      validationMessage: null,
+      lastTemplate: { floorPlanId: plan.id, templateId, turns },
+    });
   },
   zoomIn: () => set(({ viewport }) => ({ viewport: { ...viewport, scale: Math.min(viewport.scale + 0.1, maxScale) } })),
   zoomOut: () => set(({ viewport }) => ({ viewport: { ...viewport, scale: Math.max(viewport.scale - 0.1, minScale) } })),

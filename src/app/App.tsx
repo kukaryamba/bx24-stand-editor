@@ -20,7 +20,7 @@ import { useEditorStore } from "../features/plan-editor/store/editorStore";
 import { defaultStandSizeM, findStandByDeal, formatMeters, getFloorPlan, getFloorPlanKind, getStandSizeMeters } from "../shared/domain/project";
 import { cropImage, detectGridStep } from "../shared/geometry/detectGrid";
 import { uploadPlanImage } from "../shared/storage/planUpload";
-import { standTemplates } from "../shared/domain/standTemplates";
+import { describeWalls, rotateTemplate, standTemplates, templateVariants } from "../shared/domain/standTemplates";
 import { dealTabPlacement, portalChrome, sliderChrome, stretchAppWindow } from "../shared/crm/bitrixApi";
 
 /**
@@ -73,6 +73,7 @@ export function App() {
   const resizeStandPlan = useEditorStore((state) => state.resizeStandPlan);
   const renameExhibition = useEditorStore((state) => state.renameExhibition);
   const applyStandTemplate = useEditorStore((state) => state.applyStandTemplate);
+  const lastTemplate = useEditorStore((state) => state.lastTemplate);
   const setFloorPlanBackground = useEditorStore((state) => state.setFloorPlanBackground);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
@@ -404,20 +405,29 @@ export function App() {
             <p>Площадь стенда: {(standSize.width * standSize.depth).toFixed(1).replace(".", ",")} м². Клетка сетки — 1 x 1 м.</p>
 
             <h2>Схема стенда</h2>
-            <div className="stand-templates">
-              {standTemplates.map((template) => (
-                <button
-                  key={template.id}
-                  type="button"
-                  onClick={() => applyStandTemplate(template.id)}
-                  title={template.description}
-                >
-                  <strong>{template.title}</strong>
-                  <span>{template.description}</span>
-                </button>
-              ))}
+            <div className="stand-templates stand-schemes">
+              {standTemplates.map((template) => {
+                const current = lastTemplate?.floorPlanId === activePlan.id && lastTemplate.templateId === template.id ? lastTemplate : null;
+                const variants = templateVariants(template);
+
+                return (
+                  <button
+                    key={template.id}
+                    type="button"
+                    className={current ? "is-active" : undefined}
+                    onClick={() => applyStandTemplate(template.id)}
+                    title={variants > 1 ? `${template.description}. Нажмите ещё раз — стены повернутся на 90°` : template.description}
+                  >
+                    <strong>
+                      {template.title}
+                      {current && variants > 1 ? ` · ${current.turns + 1} из ${variants}` : ""}
+                    </strong>
+                    <span>{current ? describeWalls(rotateTemplate(template, current.turns)) : template.description}</span>
+                  </button>
+                );
+              })}
             </div>
-            <p>Схема расставляет стены по периметру. Мебель остаётся на месте, прежние стены заменяются.</p>
+            <p>Схема расставляет стены по периметру. Нажмите схему ещё раз — стены повернутся на 90°. Мебель остаётся на месте, прежние стены заменяются.</p>
           </div>
         ) : null}
 

@@ -668,6 +668,11 @@ p {
   cursor: default;
 }
 
+/* Выбранную схему нажимают ещё раз, чтобы повернуть, — она остаётся кнопкой. */
+.stand-schemes button.is-active {
+  cursor: pointer;
+}
+
 /* Ждёт второго щелчка: следующий заменит текущую подложку. */
 .stand-templates button.is-danger {
   border-color: #b3261e;

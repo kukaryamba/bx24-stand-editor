@@ -47,6 +47,35 @@ export const standTemplates: StandTemplate[] = [
   },
 ];
 
+/** Стороны по часовой стрелке, если смотреть на план сверху. */
+const clockwise: Side[] = ["back", "right", "front", "left"];
+
+/**
+ * Схема, повёрнутая на turns четвертей оборота по часовой стрелке.
+ * Стенд на выставке бывает открыт в любую сторону — к проходу, а не
+ * обязательно вниз по плану.
+ */
+export function rotateTemplate(template: StandTemplate, turns: number): StandTemplate {
+  const walls = template.walls.map((side) => clockwise[(clockwise.indexOf(side) + turns) % clockwise.length]);
+  return { ...template, walls };
+}
+
+/**
+ * Сколько разных расстановок даёт поворот. Остров без стен одинаков
+ * при любом повороте; у остальных схем стены несимметричны — четыре.
+ */
+export function templateVariants(template: StandTemplate): number {
+  return template.walls.length === 0 ? 1 : clockwise.length;
+}
+
+const sideNames: Record<Side, string> = { back: "сзади", right: "справа", front: "спереди", left: "слева" };
+
+/** Где стены у повёрнутой схемы — словами, по порядку обхода. */
+export function describeWalls(template: StandTemplate): string {
+  const sides = clockwise.filter((side) => template.walls.includes(side));
+  return sides.length ? `Стены ${sides.map((side) => sideNames[side]).join(", ")}` : "Без стен";
+}
+
 /** Толщина стеновой панели, метры — как у элемента стены в каталоге. */
 const wallThicknessM = 0.1;
 
