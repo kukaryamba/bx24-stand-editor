@@ -6,6 +6,7 @@ import { getCanvasObject, getFloorPlan, getObjectStandMeta, getStandSizeMeters }
 import { buildSpecification, formatNumber } from "../../../shared/domain/specification";
 import { renderPlanToDataUrl } from "../exportPlanImage";
 import { useFriezeDefaultLabel } from "../hooks/useFriezeDefaultLabel";
+import { useStandHeading } from "../hooks/useStandHeading";
 import { useEditorStore } from "../store/editorStore";
 
 type Props = {
@@ -33,7 +34,7 @@ export function StandPassport({ onClose }: Props) {
   const stand = plan?.standObjectId ? getCanvasObject(project, plan.standObjectId) : null;
   const standMeta = stand ? getObjectStandMeta(stand) : null;
   const size = plan ? getStandSizeMeters(plan) : { width: 0, depth: 0 };
-  const exhibition = project?.exhibitions[0]?.title ?? "Выставка";
+  const heading = useStandHeading(plan);
   const dealId = standMeta?.dealId ?? crm.dealId;
 
   const [deal, setDeal] = useState<DealSummary | null>(null);
@@ -84,15 +85,9 @@ export function StandPassport({ onClose }: Props) {
           </button>
         </div>
 
+        {/* Сверху только название стенда — то же, что в заголовке редактора. */}
         <div className="passport__head">
-          <div>
-            <h3>{exhibition}</h3>
-            <p className="passport__kicker">Паспорт стенда // Stand passport</p>
-          </div>
-          <div className="passport__number">
-            <span>STAND // СТЕНД</span>
-            <strong>№ {standMeta?.number ?? plan?.title ?? "—"}</strong>
-          </div>
+          <h3>{heading}</h3>
         </div>
 
         <dl className="passport__facts">

@@ -59,12 +59,16 @@ export async function loadDealTitles(dealIds: string[]): Promise<Map<string, str
     }).then((deals) => new Map(deals.map((deal) => [String(deal.ID), typeof deal.TITLE === "string" ? deal.TITLE : null])));
 
     for (const id of chunk) {
+      const single = () => callMethod<Record<string, unknown>>("crm.deal.get", { id: Number(id) }).then((deal) => (typeof deal.TITLE === "string" ? deal.TITLE : null));
       titles.set(
         id,
         pending
-          .then((found) => found.get(id) ?? null)
+          // Список не отдал сделку или не сработал вовсе — спрашиваем её отдельно,
+          // чтобы из-за списка номер не пропал.
+          .then((found) => (found.has(id) ? (found.get(id) ?? null) : single()))
+          .catch(() => single())
           .catch((error: unknown) => {
-            console.warn("Не удалось получить названия сделок.", error);
+            console.warn("Не удалось получить название сделки.", error);
             titles.delete(id);
             return null;
           }),

@@ -285,19 +285,24 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return;
     }
 
+    // Рисуют из сделки, у которой ещё нет стенда, — стенд её: сразу привязываем,
+    // и номер придёт из названия сделки. Иначе стенд свободный, номер временный.
+    const dealId = state.crm.dealId && !findStandByDeal(project, state.crm.dealId) ? state.crm.dealId : null;
+    const standCount = project.objects.filter((item) => item.kind === "stand").length + 1;
+
     const objectId = createId("object");
     const object: CanvasObject = {
       id: objectId,
       floorPlanId: floorPlan.id,
       layerId: getStandLayerId(project, floorPlan.id),
       kind: "stand",
-      name: `Стенд ${project.objects.length + 1}`,
+      name: `Стенд ${standCount}`,
       shape: { kind: "polygon", points },
       meta: {
         stand: {
-          number: `Новый-${project.objects.length + 1}`,
-          status: "available",
-          dealId: null,
+          number: `Новый-${standCount}`,
+          status: dealId ? "reserved" : "available",
+          dealId,
           note: "",
         },
       },

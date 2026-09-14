@@ -17,17 +17,8 @@ import { useCategoryAccess } from "../features/plan-editor/hooks/useCategoryAcce
 import { usePanelWidths } from "../features/plan-editor/hooks/usePanelWidths";
 import { useStandPlanSync } from "../features/plan-editor/hooks/useStandPlanSync";
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
-import {
-  defaultStandSizeM,
-  findStandByDeal,
-  formatMeters,
-  getCanvasObject,
-  getFloorPlan,
-  getFloorPlanKind,
-  getObjectStandMeta,
-  getStandSizeMeters,
-} from "../shared/domain/project";
-import { companyShortName, standNumberFromTitle, useDealTitle } from "../shared/crm/dealTitle";
+import { defaultStandSizeM, findStandByDeal, formatMeters, getFloorPlan, getFloorPlanKind, getStandSizeMeters } from "../shared/domain/project";
+import { useStandHeading } from "../features/plan-editor/hooks/useStandHeading";
 import { cropImage, detectGridStep } from "../shared/geometry/detectGrid";
 import { uploadPlanImage } from "../shared/storage/planUpload";
 import { describeWalls, rotateTemplate, standTemplates, templateVariants } from "../shared/domain/standTemplates";
@@ -40,20 +31,7 @@ import { dealTabPlacement, portalChrome, sliderChrome, stretchAppWindow } from "
  * спорят, и рамка дёргается.
  */
 function StandHeading({ plan }: { plan: FloorPlan }) {
-  const project = useEditorStore((state) => state.project);
-  const crm = useEditorStore((state) => state.crm);
-
-  const stand = plan.standObjectId ? getCanvasObject(project, plan.standObjectId) : null;
-  const meta = stand ? getObjectStandMeta(stand) : null;
-  const title = useDealTitle(meta?.dealId ?? crm.dealId, crm.provider === "bitrix24");
-
-  // Заголовок собирается заново, а не берётся из сохранённого: номер и название
-  // сделки меняются уже после того, как площадку создали.
-  const size = getStandSizeMeters(plan);
-  const company = companyShortName(title);
-  const number = standNumberFromTitle(title) ?? meta?.number;
-  const name = [number ? `Стенд ${number}` : "Стенд", company].filter(Boolean).join(" · ");
-  return <>{`${name} — ${formatMeters(size.width)} x ${formatMeters(size.depth)} м`}</>;
+  return <>{useStandHeading(plan)}</>;
 }
 
 function windowChrome(placement: string | null | undefined): number {
