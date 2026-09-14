@@ -17,7 +17,17 @@ import { useCategoryAccess } from "../features/plan-editor/hooks/useCategoryAcce
 import { usePanelWidths } from "../features/plan-editor/hooks/usePanelWidths";
 import { useStandPlanSync } from "../features/plan-editor/hooks/useStandPlanSync";
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
-import { defaultStandSizeM, findStandByDeal, formatMeters, getFloorPlan, getFloorPlanKind, getStandSizeMeters } from "../shared/domain/project";
+import {
+  defaultStandSizeM,
+  findStandByDeal,
+  formatMeters,
+  getCanvasObject,
+  getFloorPlan,
+  getFloorPlanKind,
+  getObjectStandMeta,
+  getStandSizeMeters,
+} from "../shared/domain/project";
+import { companyShortName, standNumberFromTitle, useDealTitle } from "../shared/crm/dealTitle";
 import { cropImage, detectGridStep } from "../shared/geometry/detectGrid";
 import { uploadPlanImage } from "../shared/storage/planUpload";
 import { describeWalls, rotateTemplate, standTemplates, templateVariants } from "../shared/domain/standTemplates";
@@ -29,12 +39,29 @@ import { dealTabPlacement, portalChrome, sliderChrome, stretchAppWindow } from "
  * одинаково при запуске и при изменении размера — иначе два расчёта
  * спорят, и рамка дёргается.
  */
+function StandHeading({ plan }: { plan: FloorPlan }) {
+  const project = useEditorStore((state) => state.project);
+  const crm = useEditorStore((state) => state.crm);
+
+  const stand = plan.standObjectId ? getCanvasObject(project, plan.standObjectId) : null;
+  const meta = stand ? getObjectStandMeta(stand) : null;
+  const title = useDealTitle(meta?.dealId ?? crm.dealId, crm.provider === "bitrix24");
+
+  // Заголовок собирается заново, а не берётся из сохранённого: номер и название
+  // сделки меняются уже после того, как площадку создали.
+  const size = getStandSizeMeters(plan);
+  const company = companyShortName(title);
+  const number = standNumberFromTitle(title) ?? meta?.number;
+  const name = [number ? `Стенд ${number}` : "Стенд", company].filter(Boolean).join(" · ");
+  return <>{`${name} — ${formatMeters(size.width)} x ${formatMeters(size.depth)} м`}</>;
+}
+
 function windowChrome(placement: string | null | undefined): number {
   return placement === dealTabPlacement ? portalChrome : sliderChrome;
 }
 import { bitrixCrmProvider } from "../shared/crm/bitrixCrmProvider";
 import { loadExpoPlan, mergeWithLocalBackgrounds, saveExpoPlan, stripForPortal } from "../shared/crm/expoPlanRepository";
-import type { EditorScreen } from "../shared/domain/types";
+import type { EditorScreen, FloorPlan } from "../shared/domain/types";
 import { localPlanRepository } from "../shared/storage/localPlanRepository";
 
 export function App() {
@@ -311,7 +338,7 @@ export function App() {
       <aside className="left-panel" aria-label="Панель инструментов">
         <div className="brand">
           <span className="brand__kicker">Bitrix24 Local App</span>
-          <h1>{screen === "expo" ? "План выставки" : activePlan?.title ?? "План стенда"}</h1>
+          <h1>{screen === "expo" || !activePlan ? "План выставки" : <StandHeading plan={activePlan} />}</h1>
         </div>
 
         <div className="mode-switch" role="group" aria-label="Экран">

@@ -77,6 +77,27 @@ export async function loadDealTitles(dealIds: string[]): Promise<Map<string, str
   return result;
 }
 
+/** Организационно-правовые формы: в заголовке они только занимают место. */
+const legalForms = /(?<![\p{L}\d])(ООО|ОАО|ЗАО|ПАО|НАО|АО|ИП|ТОО|НПО|НПП|НПФ|ГУП|МУП|ФГУП|ФГБУ|АНО|ООО\s+ТД|ТД|LLC|LTD|GMBH|INC)(?![\p{L}\d])\.?/giu;
+
+/** Длиннее — заголовок площадки переносится на три строки. */
+const companyMaxLength = 24;
+
+/**
+ * Короткое название компании для заголовка: название сделки до слова «стенд»,
+ * без ООО, ИП и прочих форм и без кавычек; длинное обрезается многоточием.
+ */
+export function companyShortName(title: string | null): string {
+  const company = friezeLabelFromTitle(title)
+    .replace(legalForms, " ")
+    .replace(/[«»"“”„']/gu, " ")
+    .replace(/\s+/gu, " ")
+    .replace(/^[\s,;:—–-]+|[\s,;:—–-]+$/gu, "");
+
+  const chars = Array.from(company);
+  return chars.length > companyMaxLength ? `${chars.slice(0, companyMaxLength - 1).join("").trimEnd()}…` : company;
+}
+
 /** Надпись по умолчанию: название сделки до слова «стенд». */
 export function friezeLabelFromTitle(title: string | null): string {
   if (!title) return "";

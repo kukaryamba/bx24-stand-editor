@@ -16,6 +16,8 @@ import {
   getObjectPoints,
   getObjectStandMeta,
   getStandPlans,
+  getStandSizeMeters,
+  standPlanTitle,
   withPolygonPoints,
 } from "../../../shared/domain/project";
 import type {
@@ -476,7 +478,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         changed = true;
         return { ...item, name: number, meta: { ...item.meta, stand: { ...meta, number } } };
       });
-      return changed ? { ...project, objects } : project;
+      // Заголовок площадки хранит номер — иначе там так и осталось бы «Новый-43».
+      const floorPlans = project.floorPlans.map((plan) => {
+        const number = plan.standObjectId ? numbers[plan.standObjectId] : undefined;
+        if (!number) return plan;
+        const size = getStandSizeMeters(plan);
+        const title = standPlanTitle(number, size.width, size.depth);
+        if (plan.title === title) return plan;
+        changed = true;
+        return { ...plan, title };
+      });
+      return changed ? { ...project, objects, floorPlans } : project;
     };
 
     const project = get().project;
@@ -667,9 +679,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     const nextPlan: FloorPlan = {
       ...plan,
-      title: standNumber
-        ? `Стенд ${standNumber} — ${formatMeters(safeWidth)} x ${formatMeters(safeDepth)} м`
-        : `Стенд ${formatMeters(safeWidth)} x ${formatMeters(safeDepth)} м`,
+      title: standPlanTitle(standNumber, safeWidth, safeDepth),
       width: safeWidth * pxPerMeter,
       height: safeDepth * pxPerMeter,
     };
