@@ -333,7 +333,12 @@ export function PlanCanvas() {
           ))}
         </Layer>
 
-        <Layer>
+        {/*
+          Пока рисуют новый стенд, стенды и предметы щелчков не ловят: иначе
+          щелчок по соседнему стенду или стене выделял его или начинал перетаскивание,
+          и вершину на его границе было не поставить.
+        */}
+        <Layer listening={tool !== "polygon"}>
           {standObjects.map((object) => (
             <StandShape
               key={object.id}
