@@ -13,6 +13,7 @@ import {
 } from "../../../shared/domain/project";
 import { statusLabels } from "../../../shared/domain/status";
 import { polygonArea } from "../../../shared/geometry/polygon";
+import { standNumberFromTitle, useDealTitle } from "../../../shared/crm/dealTitle";
 import { useFriezeLabels } from "../hooks/useFriezeDefaultLabel";
 import { standStatuses, useEditorStore } from "../store/editorStore";
 import { PassportForm } from "./PassportForm";
@@ -42,6 +43,38 @@ function FriezeLabelHint({ label, custom }: { label: string; custom: boolean }) 
       )}{" "}
       {custom ? "Сотрите, чтобы снова брать надпись из названия сделки." : "Пока взята из названия сделки до слова «стенд»."}
     </p>
+  );
+}
+
+/**
+ * Номер стенда. Если в названии сделки есть номер вида «D4-1», он главный:
+ * поле только показывает его, править нужно название сделки. Иначе номер
+ * вписывается руками.
+ */
+function StandNumberField({ standObjectId, number, dealId }: { standObjectId: string; number: string; dealId: string | null }) {
+  const crm = useEditorStore((state) => state.crm);
+  const updateStand = useEditorStore((state) => state.updateStand);
+  const title = useDealTitle(dealId, crm.provider === "bitrix24");
+  const fromDeal = standNumberFromTitle(title);
+
+  return (
+    <>
+      <label>
+        Номер
+        <input
+          value={fromDeal ?? number}
+          readOnly={Boolean(fromDeal)}
+          onChange={(event) => updateStand(standObjectId, { number: event.target.value })}
+        />
+      </label>
+      <p className="stand-hint">
+        {fromDeal
+          ? "Из названия сделки. Чтобы поменять, переименуйте сделку."
+          : dealId
+            ? "В названии сделки нет номера вида D4-1 — впишите вручную."
+            : "Привяжите сделку — номер возьмётся из её названия."}
+      </p>
+    </>
   );
 }
 
@@ -206,10 +239,8 @@ export function PropertiesPanel() {
         <div className="property-form">
           <h2>Карточка объекта</h2>
 
-          <label>
-            Номер
-            <input value={stand.number} onChange={(event) => updateStand(object.id, { number: event.target.value })} />
-          </label>
+          <StandNumberField standObjectId={object.id} number={stand.number} dealId={stand.dealId} />
+
 
           <label>
             Статус

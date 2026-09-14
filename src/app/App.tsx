@@ -12,6 +12,7 @@ import { StandNavigator } from "../features/plan-editor/components/StandNavigato
 import { exportPlanToPng } from "../features/plan-editor/exportPlanImage";
 import { Toolbar } from "../features/plan-editor/components/Toolbar";
 import { useAutoBackup } from "../features/plan-editor/hooks/useAutoBackup";
+import { useStandNumbersFromDeals } from "../features/plan-editor/hooks/useStandNumbersFromDeals";
 import { useCategoryAccess } from "../features/plan-editor/hooks/useCategoryAccess";
 import { usePanelWidths } from "../features/plan-editor/hooks/usePanelWidths";
 import { useStandPlanSync } from "../features/plan-editor/hooks/useStandPlanSync";
@@ -52,6 +53,7 @@ export function App() {
   /** Пришла ли карта из портала. До этого автоматическая копия сохранила бы пустую заготовку. */
   const [portalReady, setPortalReady] = useState(false);
   useAutoBackup(portalReady);
+  useStandNumbersFromDeals();
   /** Что уже отправлено в портал — чтобы не слать одно и то же. */
   const portalSavedRef = useRef<string | null>(null);
   const backgroundUploadRef = useRef<HTMLInputElement | null>(null);

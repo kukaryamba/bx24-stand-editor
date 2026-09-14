@@ -129,6 +129,11 @@ type EditorState = {
    * с анкетой. Всё одним шагом истории.
    */
   setStandFriezeText: (standObjectId: string, text: string) => void;
+  /**
+   * Номера стендов из названий их сделок. Мимо истории: это не правка
+   * пользователя, а сверка с порталом, и Ctrl+Z не должен её отменять.
+   */
+  syncStandNumbers: (numbers: Record<string, string>) => void;
   /** Переключает редактор между картой павильона и площадкой стенда. */
   showFloorPlanKind: (kind: FloorPlanKind) => void;
   /** Открывает площадку выбранного стенда, при необходимости заводит её. */
@@ -457,6 +462,31 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...project,
       objects: project.objects.map((item) => (item.id === objectId ? nextObject : item)),
     });
+  },
+  syncStandNumbers: (numbers) => {
+    const apply = (project: ExhibitionProject): ExhibitionProject => {
+      let changed = false;
+      const objects = project.objects.map((item) => {
+        const number = numbers[item.id];
+        const meta = getObjectStandMeta(item);
+        if (!number || !meta || meta.number === number) return item;
+        changed = true;
+        return { ...item, name: number, meta: { ...item.meta, stand: { ...meta, number } } };
+      });
+      return changed ? { ...project, objects } : project;
+    };
+
+    const project = get().project;
+    if (!project) return;
+    const next = apply(project);
+    if (next === project) return;
+
+    // Снимки истории тоже поправляем — иначе отмена любой правки вернула бы старый номер.
+    set((state) => ({
+      project: next,
+      historyPast: state.historyPast.map(apply),
+      historyFuture: state.historyFuture.map(apply),
+    }));
   },
   setStandFriezeText: (standObjectId, text) => {
     const project = get().project;
