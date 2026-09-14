@@ -15,7 +15,7 @@ import { useCategoryAccess } from "../features/plan-editor/hooks/useCategoryAcce
 import { usePanelWidths } from "../features/plan-editor/hooks/usePanelWidths";
 import { useStandPlanSync } from "../features/plan-editor/hooks/useStandPlanSync";
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
-import { defaultStandSizeM, findStandByDeal, formatMeters, getFloorPlan, getFloorPlanKind, getFloorPlanLayers, getStandSizeMeters } from "../shared/domain/project";
+import { defaultStandSizeM, findStandByDeal, formatMeters, getFloorPlan, getFloorPlanKind, getStandSizeMeters } from "../shared/domain/project";
 import { cropImage, detectGridStep } from "../shared/geometry/detectGrid";
 import { uploadPlanImage } from "../shared/storage/planUpload";
 import { standTemplates } from "../shared/domain/standTemplates";
@@ -70,7 +70,6 @@ export function App() {
   const categoryAccess = useCategoryAccess(crm.provider === "bitrix24" && crm.placement === dealTabPlacement, crm.dealId);
   const activePlan = useMemo(() => getFloorPlan(project, activeFloorPlanId), [activeFloorPlanId, project]);
   const standSyncError = useStandPlanSync(activePlan, crm.provider === "bitrix24");
-  const planLayers = useMemo(() => getFloorPlanLayers(project, activeFloorPlanId), [activeFloorPlanId, project]);
   // Экран не хранится отдельно: он определяется тем, какой план открыт.
   // Иначе переход в стенд с карты не переключал бы панели.
   const screen: EditorScreen = getFloorPlanKind(activePlan);
@@ -480,18 +479,6 @@ export function App() {
         ) : null}
 
         {screen === "stand" ? <DealSyncPanel /> : null}
-
-        {planLayers.length > 0 ? (
-          <div className="panel-section layer-list">
-            <h2>Слои</h2>
-            {planLayers.map((layer) => (
-              <div key={layer.id} className="layer-list__item">
-                <span>{layer.name}</span>
-                <span>{layer.visible ? "Виден" : "Скрыт"}</span>
-              </div>
-            ))}
-          </div>
-        ) : null}
       </aside>
 
       <div

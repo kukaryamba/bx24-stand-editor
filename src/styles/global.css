@@ -38,16 +38,25 @@ button {
   overflow: hidden;
 }
 
-.checkbox-row {
+/*
+ * Галочка и подпись в одну строку. Селектор с классом панели нужен
+ * по специфичности: правило «.grid-settings label» ставит подписи сеткой,
+ * и галочка уезжала на отдельную строку над текстом.
+ */
+.checkbox-row,
+.grid-settings .checkbox-row {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 4px;
   font-size: 13px;
+  font-weight: 400;
   cursor: pointer;
 }
 
-.checkbox-row input {
+.checkbox-row input,
+.grid-settings .checkbox-row input {
+  flex: none;
   width: auto;
   margin: 0;
 }
@@ -629,7 +638,20 @@ p {
 .plan-library__save {
   display: grid;
   gap: 6px;
-  margin-top: 8px;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px dashed #cbd2dc;
+}
+
+.plan-library__save h3 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.plan-library__save button:disabled,
+.plan-library__save input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .plan-library__save input {

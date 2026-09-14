@@ -51,6 +51,16 @@ export function PlanLibrary({ plan, onApplied }: Props) {
   const isLocalOnly = imageUrl.startsWith("data:");
   const alreadyListed = [...bundledPlans, ...saved].some((item) => item.background.imageUrl === imageUrl);
 
+  const saveBlocker = !inPortal
+    ? "Сохранять в общий список можно только из портала: откройте приложение из карточки сделки."
+    : !plan.background
+      ? "Сначала загрузите план кнопкой «Загрузить план» на панели инструментов."
+      : alreadyListed
+        ? "Текущий план уже есть в списке."
+        : isLocalOnly
+          ? "Этот план не удалось сохранить на хостинг, он остался только в вашем браузере. Загрузите его заново. Если не выходит — проверьте, что в настройках приложения в портале указан адрес https://alitinform.ru/stand-editor/."
+          : null;
+
   const apply = (item: BundledPlan) => {
     const current = imageUrl === item.background.imageUrl;
     if (current) return;
@@ -154,18 +164,24 @@ export function PlanLibrary({ plan, onApplied }: Props) {
         })}
       </div>
 
-      {plan.background && !alreadyListed ? (
-        isLocalOnly ? (
-          <p>Текущий план сохранён только в этом браузере — в общий список его не добавить. Загрузите его заново из портала.</p>
-        ) : inPortal ? (
-          <div className="plan-library__save">
-            <input value={title} placeholder="Название, например ЦБСС 2027" onChange={(event) => setTitle(event.target.value)} />
-            <button type="button" className="primary-action" onClick={() => void saveCurrent()}>
-              Сохранить текущий план в список
-            </button>
-          </div>
-        ) : null
-      ) : null}
+      {/*
+        Блок сохранения виден всегда. Раньше он появлялся только при нескольких
+        условиях сразу и молча прятался, если хоть одно не выполнено, — кнопку
+        просто не находили. Теперь, если сохранить нельзя, сказано почему.
+      */}
+      <div className="plan-library__save">
+        <h3>Сохранить текущий план в список</h3>
+        <input
+          value={title}
+          placeholder="Название, например ЦБСС 2027"
+          disabled={Boolean(saveBlocker)}
+          onChange={(event) => setTitle(event.target.value)}
+        />
+        <button type="button" className="primary-action" disabled={Boolean(saveBlocker)} onClick={() => void saveCurrent()}>
+          Сохранить в список
+        </button>
+        {saveBlocker ? <p className="stand-hint">{saveBlocker}</p> : null}
+      </div>
 
       {status ? <p>{status}</p> : null}
     </>
