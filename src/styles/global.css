@@ -1033,6 +1033,72 @@ p {
   text-overflow: ellipsis;
 }
 
+.backup-actions {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 4px;
+}
+
+.backup-actions button {
+  min-height: 34px;
+  border: 1px solid #cfd6df;
+  background: #ffffff;
+  color: #253141;
+  cursor: pointer;
+}
+
+.backup-actions button:disabled,
+.backup-list button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.backup-list__title {
+  margin: 16px 0 6px;
+  font-size: 13px;
+}
+
+.backup-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.backup-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid #e5e8ee;
+}
+
+.backup-list li span {
+  display: grid;
+  font-size: 13px;
+}
+
+.backup-list li small {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.backup-list button {
+  flex: none;
+  padding: 4px 10px;
+  border: 1px solid #cfd6df;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.backup-list button.is-danger {
+  border-color: #b3261e;
+  background: #fdecec;
+  color: #b3261e;
+}
+
 .install-card__facts {
   display: grid;
   gap: 8px;

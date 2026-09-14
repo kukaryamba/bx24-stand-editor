@@ -1,4 +1,5 @@
 ﻿import { useEffect, useState } from "react";
+import { BackupPanel } from "./BackupPanel";
 import { appHandlerUrl, bindDealTab, finishInstall } from "../../../shared/crm/bitrixApi";
 import { getAllowedCategory, listDealCategories, setAllowedCategory, type DealCategory } from "../../../shared/crm/dealCategory";
 
@@ -88,6 +89,7 @@ export function InstallScreen({ onContinue }: InstallScreenProps) {
         ) : null}
 
         {state.kind === "done" ? <CategoryPicker /> : null}
+        {state.kind === "done" ? <BackupPanel /> : null}
 
         <dl className="install-card__facts">
           <div>
