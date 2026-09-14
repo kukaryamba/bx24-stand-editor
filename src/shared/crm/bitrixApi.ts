@@ -25,6 +25,8 @@ type Bx24 = {
   getDomain?(): string;
   /** Токен текущего пользователя — им сервер проверяет, что запрос из портала. */
   getAuth?(): { access_token: string; domain: string } | false;
+  /** Получает новый токен: старый живёт час, а приложение бывает открыто дольше. */
+  refreshAuth?(callback: (auth: { access_token: string; domain: string }) => void): void;
 };
 
 declare global {
@@ -269,6 +271,29 @@ export function portalAuth(): { domain: string; token: string } | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * То же, но с новым токеном. Для запросов на хостинг: сервер сверяет токен
+ * с порталом, и истёкший не пройдёт. Если обновить не вышло — берём текущий.
+ */
+export function freshPortalAuth(): Promise<{ domain: string; token: string } | null> {
+  const current = portalAuth();
+  const refresh = window.BX24?.refreshAuth?.bind(window.BX24);
+  if (!current || !refresh) return Promise.resolve(current);
+
+  return new Promise((resolve) => {
+    const fallback = window.setTimeout(() => resolve(current), 5000);
+    try {
+      refresh(() => {
+        window.clearTimeout(fallback);
+        resolve(portalAuth() ?? current);
+      });
+    } catch {
+      window.clearTimeout(fallback);
+      resolve(current);
+    }
+  });
 }
 
 /** Ссылка на карточку сделки в портале. */

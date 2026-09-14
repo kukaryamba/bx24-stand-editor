@@ -1,4 +1,4 @@
-import { portalAuth } from "../crm/bitrixApi";
+import { freshPortalAuth, portalAuth } from "../crm/bitrixApi";
 import { getAllowedCategory, setAllowedCategory, type DealCategory } from "../crm/dealCategory";
 import { saveExpoPlan, stripForPortal } from "../crm/expoPlanRepository";
 import { loadPlanLibrary, savePlanLibrary, type SavedPlan } from "../crm/planLibrary";
@@ -128,7 +128,7 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 }
 
 async function callBackup(fields: Record<string, string>): Promise<Response> {
-  const auth = portalAuth();
+  const auth = await freshPortalAuth();
   if (!auth) throw new Error("Резервные копии на хостинге доступны только из портала.");
 
   const form = new FormData();

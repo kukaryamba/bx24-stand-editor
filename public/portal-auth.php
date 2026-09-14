@@ -34,7 +34,9 @@ function require_portal_user(): array
         portal_fail(403, 'Доступно только из портала компании.');
     }
 
-    $checkUrl = 'https://' . $domain . '/rest/user.current.json?auth=' . urlencode($auth);
+    // profile, а не user.current: тому нужно право приложения «Пользователи»,
+    // без него портал отвечает отказом даже на настоящий токен.
+    $checkUrl = 'https://' . $domain . '/rest/profile.json?auth=' . urlencode($auth);
     $response = false;
     if (function_exists('curl_init')) {
         $curl = curl_init($checkUrl);
@@ -47,7 +49,9 @@ function require_portal_user(): array
 
     $user = $response ? json_decode($response, true) : null;
     if (empty($user['result']['ID'])) {
-        portal_fail(403, 'Портал не подтвердил вход. Откройте приложение из Битрикс24 заново.');
+        // Код ответа портала помогает понять причину: истёкший токен или нехватка прав.
+        $reason = is_array($user) && !empty($user['error']) ? ' (' . $user['error'] . ')' : ($response ? '' : ' (портал не ответил)');
+        portal_fail(403, 'Портал не подтвердил вход' . $reason . '. Откройте приложение из Битрикс24 заново.');
     }
 
     return $user['result'];

@@ -1,4 +1,4 @@
-import { portalAuth } from "../crm/bitrixApi";
+import { freshPortalAuth } from "../crm/bitrixApi";
 
 /**
  * Загрузка плана выставки на хостинг, чтобы подложку видели все.
@@ -15,7 +15,7 @@ import { portalAuth } from "../crm/bitrixApi";
 const uploadUrl = "./upload.php";
 
 export async function uploadPlanImage(imageDataUrl: string, fileName: string): Promise<string> {
-  const auth = portalAuth();
+  const auth = await freshPortalAuth();
   if (!auth) {
     throw new Error("Сохранить план для всех можно, только открыв приложение из портала.");
   }
