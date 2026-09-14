@@ -229,11 +229,13 @@ export async function bindDealTab(title: string): Promise<"bound" | "rebound" | 
  * Точную высоту окна портала измерить нельзя — оно на другом домене, поэтому
  * отталкиваемся от высоты экрана, оставляя запас на шапку и карточку сделки.
  */
-export function stretchAppWindow(): void {
-  const resize = window.BX24?.resizeWindow;
+export function stretchAppWindow(contentHeight = 0): void {
+  const resize = window.BX24?.resizeWindow?.bind(window.BX24);
   if (!resize) return;
 
-  const height = Math.max(minAppHeight, window.screen.availHeight - portalChrome);
+  // Страница длиннее экрана (экран установки) — рамка растёт под неё,
+  // иначе низ обрезается, а прокручивает уже сам портал.
+  const height = Math.max(minAppHeight, window.screen.availHeight - portalChrome, Math.ceil(contentHeight));
   resize(document.documentElement.clientWidth || 1200, height);
 }
 
