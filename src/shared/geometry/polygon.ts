@@ -67,11 +67,18 @@ export function intersectsAnyStand(points: Point[], objects: CanvasObject[], ign
   });
 }
 
-export function validateStandPolygon(points: Point[], plan: FloorPlan, objects: CanvasObject[], ignoredStandId?: string): string | null {
+/**
+ * Годится ли контур стенда.
+ *
+ * Соседние стенды не проверяются: контур, замкнутый поверх соседа, — это
+ * просто другой стенд, и решает тот, кто рисует. Раньше наложение запрещалось,
+ * и нарисовать стенд рядом с соседом не получалось. Объекты и id оставлены
+ * в подписи, чтобы вызовы не менять, если проверку вернут.
+ */
+export function validateStandPolygon(points: Point[], plan: FloorPlan, _objects: CanvasObject[], _ignoredStandId?: string): string | null {
   if (points.length < 3) return "Нужно минимум 3 вершины.";
   if (!isInsidePlan(points, plan)) return "Стенд выходит за пределы плана.";
   if (hasSelfIntersection(points)) return "Контур стенда самопересекается.";
-  if (intersectsAnyStand(points, objects, ignoredStandId)) return "Стенд пересекается с существующим стендом.";
   return null;
 }
 
