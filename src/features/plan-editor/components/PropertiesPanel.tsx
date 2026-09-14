@@ -116,17 +116,21 @@ export function PropertiesPanel() {
         <div className="property-form">
           <h2>Предмет</h2>
 
-          {furnitureItem.frieze && object.shape.kind === "rectangle" ? (
+          {(furnitureItem.frieze || furnitureItem.film) && object.shape.kind === "rectangle" ? (
             <>
               <label>
                 Надпись
                 <input
                   value={furniture.label ?? ""}
-                  placeholder={friezeDefaultLabel || "ФРИЗ"}
+                  placeholder={furnitureItem.film ? "ОКЛЕЙКА" : friezeDefaultLabel || "ФРИЗ"}
                   onChange={(event) => updateFrieze(object.id, { label: event.target.value })}
                 />
               </label>
-              <FriezeLabelHint label={furniture.label ?? friezeDefaultLabel} custom={Boolean(furniture.label)} />
+              {furnitureItem.frieze ? (
+                <FriezeLabelHint label={furniture.label ?? friezeDefaultLabel} custom={Boolean(furniture.label)} />
+              ) : (
+                <p className="stand-hint">Например, цвет плёнки. Пусто — на плане будет «ОКЛЕЙКА».</p>
+              )}
 
               <label>
                 Длина, м
@@ -153,7 +157,7 @@ export function PropertiesPanel() {
             <div>
               <dt>Размер</dt>
               <dd>
-                {furnitureItem.frieze && object.shape.kind === "rectangle"
+                {(furnitureItem.frieze || furnitureItem.film) && object.shape.kind === "rectangle"
                   ? `${String(round2(object.shape.width / pxPerMeter)).replace(".", ",")} м в длину`
                   : `${String(furnitureItem.widthM).replace(".", ",")} x ${String(furnitureItem.depthM).replace(".", ",")} м`}
               </dd>

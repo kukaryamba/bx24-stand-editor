@@ -99,12 +99,25 @@ export function splitFriezeLabel(label: string): { fits: string; extra: string }
   return { fits: chars.slice(0, friezeMaxChars).join(""), extra: chars.slice(friezeMaxChars).join("") };
 }
 
+/**
+ * Растягиваемые полосы с надписью: фриз и оклейка. Устроены одинаково —
+ * тянутся в длину, надпись не растягивается, ставятся и снаружи стенда.
+ */
+export type StripKind = "frieze" | "film";
+
+export function stripKindOf(object: CanvasObject): StripKind | null {
+  const meta = getObjectFurnitureMeta(object);
+  if (!meta) return null;
+
+  const item = getFurnitureItem(meta.itemId);
+  if (item?.frieze) return "frieze";
+  if (item?.film) return "film";
+  return null;
+}
+
 /** Фризовая панель — растягивается в длину и несёт надпись. */
 export function isFriezeObject(object: CanvasObject): boolean {
-  const meta = getObjectFurnitureMeta(object);
-  if (!meta) return false;
-
-  return getFurnitureItem(meta.itemId)?.frieze === true;
+  return stripKindOf(object) === "frieze";
 }
 
 /**

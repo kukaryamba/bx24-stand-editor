@@ -190,7 +190,7 @@ export function App() {
     if (!activePlan) return;
 
     try {
-      exportPlanToPng(activePlan);
+      exportPlanToPng(activePlan, project?.objects ?? []);
       setStartupError(null);
     } catch (error) {
       setStartupError(error instanceof Error ? error.message : "Не удалось сохранить картинку плана.");

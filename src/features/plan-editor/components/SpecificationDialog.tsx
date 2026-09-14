@@ -71,6 +71,12 @@ export function SpecificationDialog({ onClose }: Props) {
               <dd>{formatNumber(specification.friezeLengthM)} м</dd>
             </div>
           ) : null}
+          {specification.filmLengthM > 0 ? (
+            <div>
+              <dt>Оклейка плёнкой</dt>
+              <dd>{formatNumber(specification.filmLengthM)} м</dd>
+            </div>
+          ) : null}
         </dl>
 
         {specification.groups.length === 0 ? (

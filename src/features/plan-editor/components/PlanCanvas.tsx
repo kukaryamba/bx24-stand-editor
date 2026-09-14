@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Konva from "konva";
 import { Circle, Group, Image, Layer, Line, Rect, Stage, Text } from "react-konva";
 import { getFurnitureImageUrl, getFurnitureItem } from "../../../shared/domain/furniture";
-import { getCanvasObject, getFloorPlan, getFloorPlanLayers, getFloorPlanObjects, getObjectFurnitureMeta, getObjectPoints, getObjectStandMeta, isFriezeObject, isWallObject, splitFriezeLabel } from "../../../shared/domain/project";
+import { getCanvasObject, getFloorPlan, getFloorPlanLayers, getFloorPlanObjects, getObjectFurnitureMeta, getObjectPoints, getObjectStandMeta, isWallObject, splitFriezeLabel, stripKindOf, friezeMaxChars, type StripKind } from "../../../shared/domain/project";
 import { currentDealColor, statusColors } from "../../../shared/domain/status";
 import type { CanvasObject, Point } from "../../../shared/domain/types";
 import { flattenPoints, polygonArea, polygonCentroid, snapPoint } from "../../../shared/geometry/polygon";
@@ -350,12 +350,13 @@ export function PlanCanvas() {
           ))}
 
           {furnitureObjects.map((object) =>
-            isFriezeObject(object) ? (
+            stripKindOf(object) ? (
               <FriezeShape
                 key={object.id}
                 object={object}
+                kind={stripKindOf(object) ?? "frieze"}
                 selected={selectedObjectIds.includes(object.id)}
-                defaultLabel={friezeDefaultLabel}
+                defaultLabel={stripKindOf(object) === "film" ? "ОКЛЕЙКА" : friezeDefaultLabel || "ФРИЗ"}
                 lengthStepPx={friezeStepPx}
                 onSelect={(additive) => selectObject(object.id, additive)}
                 onDragEnd={(event) => handleFurnitureDragEnd(object, event)}
@@ -520,8 +521,15 @@ function FurnitureShape({ object, selected, onSelect, onDragEnd }: FurnitureShap
   );
 }
 
+/** Как выглядят полосы: фриз голубой, оклейка янтарная — чтобы не путать на плане. */
+const stripStyle: Record<StripKind, { fill: string; selectedFill: string; stroke: string; text: string; limit: number | null }> = {
+  frieze: { fill: "#dceaf6", selectedFill: "#d2e3fc", stroke: "#5b6674", text: "#253141", limit: friezeMaxChars },
+  film: { fill: "#fdecc8", selectedFill: "#fbd99a", stroke: "#b06000", text: "#7a4100", limit: null },
+};
+
 type FriezeShapeProps = {
   object: CanvasObject;
+  kind: StripKind;
   selected: boolean;
   /** Надпись, если в панели своя не задана, — из названия сделки. */
   defaultLabel: string;
@@ -542,13 +550,14 @@ type FriezeShapeProps = {
  * Всё рисуется в группе, повёрнутой вместе с панелью, поэтому ручка длины
  * у повёрнутой панели сама оказывается на её конце.
  */
-function FriezeShape({ object, selected, defaultLabel, lengthStepPx, onSelect, onDragEnd, onResize }: FriezeShapeProps) {
+function FriezeShape({ object, kind, selected, defaultLabel, lengthStepPx, onSelect, onDragEnd, onResize }: FriezeShapeProps) {
   const meta = getObjectFurnitureMeta(object);
   if (object.shape.kind !== "rectangle" || !meta) return null;
 
+  const style = stripStyle[kind];
   const { origin, width: length, height: depth } = object.shape;
   const shift = imageShift(meta.rotation, length, depth);
-  const label = meta.label ?? (defaultLabel || "ФРИЗ");
+  const label = meta.label ?? defaultLabel;
   // Перевёрнутая надпись не читается — у панели, развёрнутой на 180 и 270
   // градусов, текст разворачиваем обратно.
   const flipText = meta.rotation === 180 || meta.rotation === 270;
@@ -567,11 +576,11 @@ function FriezeShape({ object, selected, defaultLabel, lengthStepPx, onSelect, o
         <Rect
           width={length}
           height={depth}
-          fill={selected ? "#d2e3fc" : "#dceaf6"}
-          stroke={selected ? "#0b57d0" : "#5b6674"}
+          fill={selected ? style.selectedFill : style.fill}
+          stroke={selected ? "#0b57d0" : style.stroke}
           strokeWidth={selected ? 2.5 : 1.5}
         />
-        <FriezeLabel label={label} length={length} depth={depth} flip={flipText} />
+        <FriezeLabel label={label} length={length} depth={depth} flip={flipText} color={style.text} limit={style.limit} />
 
         {selected ? (
           <Circle
@@ -615,8 +624,23 @@ function FriezeShape({ object, selected, defaultLabel, lengthStepPx, onSelect, o
  * Если надпись длиннее панели, шрифт уменьшается — буквы не растягиваются
  * и не вылезают за край.
  */
-function FriezeLabel({ label, length, depth, flip }: { label: string; length: number; depth: number; flip: boolean }) {
-  const { fits, extra } = splitFriezeLabel(label);
+function FriezeLabel({
+  label,
+  length,
+  depth,
+  flip,
+  color,
+  limit,
+}: {
+  label: string;
+  length: number;
+  depth: number;
+  flip: boolean;
+  color: string;
+  /** Сколько знаков помещается; лишние красным. У оклейки ограничения нет. */
+  limit: number | null;
+}) {
+  const { fits, extra } = limit === null ? { fits: label, extra: "" } : splitFriezeLabel(label);
   const baseSize = depth * 0.62;
 
   const measure = (text: string, size: number) =>
@@ -632,7 +656,7 @@ function FriezeLabel({ label, length, depth, flip }: { label: string; length: nu
   return (
     // Центр группы — центр панели: так надпись переворачивается на месте.
     <Group x={length / 2} y={depth / 2} rotation={flip ? 180 : 0} listening={false}>
-      <Text x={-total / 2} y={-fontSize / 2} text={fits} fontSize={fontSize} fontStyle="bold" fill="#253141" />
+      <Text x={-total / 2} y={-fontSize / 2} text={fits} fontSize={fontSize} fontStyle="bold" fill={color} />
       {extra ? <Text x={-total / 2 + fitsWidth} y={-fontSize / 2} text={extra} fontSize={fontSize} fontStyle="bold" fill="#d93025" /> : null}
     </Group>
   );

@@ -17,18 +17,20 @@ export function buildSpecification(project: ExhibitionProject | null, floorPlanI
   const objects = getFloorPlanObjects(project, floorPlanId).filter((object) => object.kind === "equipment");
 
   const counts = new Map<string, number>();
-  // Фриз растягивается, поэтому его считаем не штуками, а настоящей длиной.
+  // Фриз и оклейка растягиваются, поэтому их считаем не штуками, а настоящей длиной.
   const pxPerMeter = plan ? plan.grid.cellSizePx / plan.grid.metersPerCell : 1;
   let friezeLengthM = 0;
+  let filmLengthM = 0;
 
   for (const object of objects) {
     const meta = getObjectFurnitureMeta(object);
     if (!meta) continue;
     counts.set(meta.itemId, (counts.get(meta.itemId) ?? 0) + 1);
 
-    if (getFurnitureItem(meta.itemId)?.frieze && object.shape.kind === "rectangle") {
-      friezeLengthM += object.shape.width / pxPerMeter;
-    }
+    const item = getFurnitureItem(meta.itemId);
+    if (object.shape.kind !== "rectangle") continue;
+    if (item?.frieze) friezeLengthM += object.shape.width / pxPerMeter;
+    if (item?.film) filmLengthM += object.shape.width / pxPerMeter;
   }
 
   const rows: SpecificationRow[] = [];
@@ -38,8 +40,8 @@ export function buildSpecification(project: ExhibitionProject | null, floorPlanI
     const item = getFurnitureItem(itemId);
     if (!item) continue;
 
-    // Фриз заказывают погонными метрами, остальное — штуками.
-    const quantity = item.frieze ? round1(friezeLengthM) : count;
+    // Фриз и оклейку заказывают погонными метрами, остальное — штуками.
+    const quantity = item.frieze ? round1(friezeLengthM) : item.film ? round1(filmLengthM) : count;
     const priceRub = item.priceRub;
     rows.push({
       itemId,
@@ -47,13 +49,13 @@ export function buildSpecification(project: ExhibitionProject | null, floorPlanI
       title: item.title,
       category: item.category,
       quantity,
-      unit: item.frieze ? "м" : "шт",
+      unit: item.frieze || item.film ? "м" : "шт",
       priceRub,
       sumRub: priceRub === undefined ? undefined : priceRub * quantity,
     });
 
-    if (item.frieze) {
-      // Длина фриза уже посчитана по объектам, к стенам его не добавляем.
+    if (item.frieze || item.film) {
+      // Длина полос уже посчитана по объектам, к стенам их не добавляем.
     } else if (item.category === "walls") {
       // У стеновых панелей длина — это их ширина по плану.
       wallLengthM += item.widthM * quantity;
@@ -82,6 +84,7 @@ export function buildSpecification(project: ExhibitionProject | null, floorPlanI
     perimeterM,
     wallLengthM: round1(wallLengthM),
     friezeLengthM: round1(friezeLengthM),
+    filmLengthM: round1(filmLengthM),
     totalRub,
     itemsWithoutCatalogId: rows.filter((row) => !row.catalogId).reduce((sum, row) => sum + row.quantity, 0),
   };
@@ -95,6 +98,9 @@ export function specificationToText(specification: Specification, standTitle: st
   lines.push(`Периметр: ${formatNumber(specification.perimeterM)} м`);
   if (specification.friezeLengthM > 0) {
     lines.push(`Фризовые панели: ${formatNumber(specification.friezeLengthM)} м`);
+  }
+  if (specification.filmLengthM > 0) {
+    lines.push(`Оклейка плёнкой: ${formatNumber(specification.filmLengthM)} м`);
   }
   if (specification.wallLengthM > 0) {
     lines.push(`Стеновые панели: ${formatNumber(specification.wallLengthM)} м`);

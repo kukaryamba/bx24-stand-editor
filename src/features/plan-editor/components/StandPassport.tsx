@@ -45,7 +45,7 @@ export function StandPassport({ onClose }: Props) {
     if (!plan) return;
 
     try {
-      setSnapshot(renderPlanToDataUrl(plan, 2));
+      setSnapshot(renderPlanToDataUrl(plan, project?.objects ?? [], 2));
     } catch (error) {
       console.warn("Не удалось снять план стенда для паспорта.", error);
     }
@@ -179,6 +179,13 @@ export function StandPassport({ onClose }: Props) {
           <div className="passport__section">
             <h3>FRAME BOARD PANELS // ФРИЗОВЫЕ ПАНЕЛИ</h3>
             <p>Суммарная длина: {formatNumber(specification.friezeLengthM)} м</p>
+          </div>
+        ) : null}
+
+        {specification.filmLengthM > 0 ? (
+          <div className="passport__section">
+            <h3>FILM WRAPPING // ОКЛЕЙКА ПЛЁНКОЙ</h3>
+            <p>Суммарная длина: {formatNumber(specification.filmLengthM)} м</p>
           </div>
         ) : null}
 
