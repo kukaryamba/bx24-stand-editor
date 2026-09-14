@@ -224,7 +224,7 @@ export function PlanCanvas() {
     const raw = { x: event.target.x(), y: event.target.y() };
     // К сетке цепляются только стены: по ним считают погонные метры панелей.
     // Мебель ставится свободно, ей середина клетки не мешает.
-    const origin = floorPlan.grid.snap && isWallObject(object) ? snapPoint(raw, floorPlan.grid.cellSizePx, gridOffset) : raw;
+    const origin = floorPlan.grid.snap && isWallObject(object) ? snapWallEdges(object, raw, floorPlan.grid.cellSizePx, gridOffset) : raw;
     event.target.position(origin);
     moveFurniture(object.id, origin);
   };
@@ -527,9 +527,13 @@ function FurnitureShape({ object, selected, onSelect, onDragEnd }: FurnitureShap
 }
 
 /** Как выглядят полосы: фриз голубой, оклейка янтарная — чтобы не путать на плане. */
-const stripStyle: Record<StripKind, { fill: string; selectedFill: string; stroke: string; text: string; limit: number | null }> = {
-  frieze: { fill: "#dceaf6", selectedFill: "#d2e3fc", stroke: "#5b6674", text: "#253141", limit: friezeMaxChars },
-  film: { fill: "#fdecc8", selectedFill: "#fbd99a", stroke: "#b06000", text: "#7a4100", limit: null },
+const stripStyle: Record<
+  StripKind,
+  { fill: string; selectedFill: string; stroke: string; text: string; limit: number | null; /** Высота букв от толщины полосы. */ fontScale: number }
+> = {
+  frieze: { fill: "#dceaf6", selectedFill: "#d2e3fc", stroke: "#5b6674", text: "#253141", limit: friezeMaxChars, fontScale: 0.62 },
+  // У оклейки надпись — пометка вроде цвета плёнки, а не текст на панели: мельче.
+  film: { fill: "#fdecc8", selectedFill: "#fbd99a", stroke: "#b06000", text: "#7a4100", limit: null, fontScale: 0.38 },
 };
 
 type FriezeShapeProps = {
@@ -566,7 +570,8 @@ function FriezeShape({ object, kind, selected, defaultLabel, lengthStepPx, onSel
   // Перевёрнутая надпись не читается — у панели, развёрнутой на 180 и 270
   // градусов, текст разворачиваем обратно.
   const flipText = meta.rotation === 180 || meta.rotation === 270;
-  const handleRadius = Math.max(6, depth * 0.45);
+  // Ручка меньше толщины панели: крупная закрывала надпись и соседние стены.
+  const handleRadius = Math.max(3, depth * 0.22);
 
   return (
     <Group
@@ -585,7 +590,7 @@ function FriezeShape({ object, kind, selected, defaultLabel, lengthStepPx, onSel
           stroke={selected ? "#0b57d0" : style.stroke}
           strokeWidth={selected ? 2.5 : 1.5}
         />
-        <FriezeLabel label={label} length={length} depth={depth} flip={flipText} color={style.text} limit={style.limit} />
+        <FriezeLabel label={label} length={length} depth={depth} flip={flipText} color={style.text} limit={style.limit} fontScale={style.fontScale} />
 
         {selected ? (
           <Circle
@@ -594,7 +599,9 @@ function FriezeShape({ object, kind, selected, defaultLabel, lengthStepPx, onSel
             radius={handleRadius}
             fill="#ffffff"
             stroke="#0b57d0"
-            strokeWidth={2.5}
+            strokeWidth={1.5}
+            // Ловит мышь чуть шире, чем нарисована: маленькую ручку легко промахнуться.
+            hitStrokeWidth={8}
             draggable
             onMouseDown={(event) => {
               // Иначе нажатие на ручку потащило бы всю панель.
@@ -636,6 +643,7 @@ function FriezeLabel({
   flip,
   color,
   limit,
+  fontScale,
 }: {
   label: string;
   length: number;
@@ -644,9 +652,10 @@ function FriezeLabel({
   color: string;
   /** Сколько знаков помещается; лишние красным. У оклейки ограничения нет. */
   limit: number | null;
+  fontScale: number;
 }) {
   const { fits, extra } = limit === null ? { fits: label, extra: "" } : splitFriezeLabel(label);
-  const baseSize = depth * 0.62;
+  const baseSize = depth * fontScale;
 
   const measure = (text: string, size: number) =>
     text ? new Konva.Text({ text, fontSize: size, fontStyle: "bold" }).getTextWidth() : 0;
@@ -665,6 +674,34 @@ function FriezeLabel({
       {extra ? <Text x={-total / 2 + fitsWidth} y={-fontSize / 2} text={extra} fontSize={fontSize} fontStyle="bold" fill="#d93025" /> : null}
     </Group>
   );
+}
+
+/**
+ * Привязка стены, фриза или оклейки к линиям сетки — ближайшим краем.
+ *
+ * Раньше к линии цеплялся только левый верхний угол. Панель толщиной
+ * в треть клетки, поставленная снаружи вплотную к стенду, прыгала
+ * внутрь: её угол ближе к линии границы, чем к следующей. Теперь по каждой
+ * оси к линии прижимается тот край, который к ней ближе, — и снаружи,
+ * и изнутри панель встаёт вплотную к границе.
+ */
+function snapWallEdges(object: CanvasObject, raw: Point, gridSize: number, offset: Point): Point {
+  if (object.shape.kind !== "rectangle") return snapPoint(raw, gridSize, offset);
+
+  const rotation = getObjectFurnitureMeta(object)?.rotation ?? 0;
+  const turned = rotation === 90 || rotation === 270;
+  // Размер на плане: у повёрнутой панели длина и толщина меняются местами.
+  const sizeX = turned ? object.shape.height : object.shape.width;
+  const sizeY = turned ? object.shape.width : object.shape.height;
+
+  const snapAxis = (start: number, size: number, axisOffset: number) => {
+    const line = (value: number) => Math.round((value - axisOffset) / gridSize) * gridSize + axisOffset;
+    const byStart = line(start);
+    const byEnd = line(start + size) - size;
+    return Math.abs(byStart - start) <= Math.abs(byEnd - start) ? byStart : byEnd;
+  };
+
+  return { x: snapAxis(raw.x, sizeX, offset.x), y: snapAxis(raw.y, sizeY, offset.y) };
 }
 
 /**
