@@ -29,9 +29,10 @@ export function loadDealTitle(dealId: string): Promise<string | null> {
 
 /**
  * Номер стенда в названии: буквы ряда, число и через дефис место — D4-1.
- * Границы — не буква и не цифра, чтобы не выхватить кусок слова.
+ * Между буквой и числом бывает пробел — «D 4-2». Границы — не буква
+ * и не цифра, чтобы не выхватить кусок слова.
  */
-const standNumberPattern = /(?<![\p{L}\d])(\p{L}{1,3}\d{1,4}\s*[-–—]\s*\d{1,4})(?![\p{L}\d])/u;
+const standNumberPattern = /(?<![\p{L}\d])(\p{L}{1,3} ?\d{1,4}\s*[-–—]\s*\d{1,4})(?![\p{L}\d])/u;
 
 /**
  * Номер стенда из названия сделки, например «D4-1». Нет номера — null,
@@ -39,7 +40,7 @@ const standNumberPattern = /(?<![\p{L}\d])(\p{L}{1,3}\d{1,4}\s*[-–—]\s*\d{1,
  */
 export function standNumberFromTitle(title: string | null): string | null {
   const match = title?.match(standNumberPattern);
-  return match ? match[1].replace(/\s*[-–—]\s*/u, "-").toUpperCase() : null;
+  return match ? match[1].replace(/\s*[-–—]\s*/u, "-").replace(/\s+/gu, "").toUpperCase() : null;
 }
 
 /**
