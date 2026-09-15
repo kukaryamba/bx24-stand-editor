@@ -1326,7 +1326,7 @@ p {
 
 /* Номер строки в списке оборудования паспорта. */
 .passport__table .passport__num {
-  width: 36px;
+  width: 1%;
   text-align: center;
   white-space: nowrap;
 }

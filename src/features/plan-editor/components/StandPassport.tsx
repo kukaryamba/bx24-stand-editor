@@ -147,6 +147,7 @@ export function StandPassport({ onClose }: Props) {
               <thead>
                 <tr>
                   <th className="passport__num">№</th>
+                  <th className="passport__num">CODE // АРТ.</th>
                   <th>ITEM // НАИМЕНОВАНИЕ</th>
                   <th>QUANTITY // КОЛИЧЕСТВО</th>
                   <th>PICTURE // ОБОЗНАЧЕНИЕ</th>
@@ -161,6 +162,8 @@ export function StandPassport({ onClose }: Props) {
                     return (
                       <tr key={row.itemId}>
                         <td className="passport__num">{index + 1}</td>
+                        {/* Артикула нет у части позиций прайса — ставим прочерк, а не выдумываем. */}
+                        <td className="passport__num">{row.catalogId || "—"}</td>
                         <td>{row.title}</td>
                         <td>
                           {row.quantity} {row.unit}
