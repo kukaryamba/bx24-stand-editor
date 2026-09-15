@@ -144,7 +144,10 @@ export function PlanCanvas() {
   }
 
   const visibleLayerIds = new Set(layers.filter((layer) => layer.visible).map((layer) => layer.id));
-  const visibleObjects = objects.filter((object) => visibleLayerIds.has(object.layerId));
+  const knownLayerIds = new Set(layers.map((layer) => layer.id));
+  // Прячем только объекты явно скрытого слоя. Объект с неизвестным слоем рисуем:
+  // иначе он есть, считается и сохраняется, но на плане его не видно.
+  const visibleObjects = objects.filter((object) => visibleLayerIds.has(object.layerId) || !knownLayerIds.has(object.layerId));
   const standObjects = visibleObjects.filter((object) => object.kind === "stand");
   const furnitureObjects = visibleObjects.filter((object) => object.kind === "equipment");
   const gridOffset: Point = { x: floorPlan.grid.offsetX ?? 0, y: floorPlan.grid.offsetY ?? 0 };

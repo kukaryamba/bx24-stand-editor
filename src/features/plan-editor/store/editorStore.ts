@@ -216,7 +216,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (!project) return;
 
     const untouched = project.objects.filter((object) => object.kind !== "equipment" || object.floorPlanId !== floorPlanId);
-    const restored = objects.map((object) => ({ ...object, floorPlanId: floorPlanId ?? object.floorPlanId }));
+    // Слой тоже перепривязываем: план в сделке мог быть сохранён с другой площадки
+    // (сделку перевязали на другой стенд), и предметы со слоем чужой площадки
+    // лежали на этой, но не рисовались — площадка выглядела пустой.
+    const restored = objects.map((object) =>
+      floorPlanId ? { ...object, floorPlanId, layerId: getLayerId(project, floorPlanId, "stands") } : object,
+    );
 
     commitProject(set, get, { ...project, objects: [...untouched, ...restored] });
     set({ selectedObjectId: null, selectedObjectIds: [], draftPoints: [], validationMessage: null });
