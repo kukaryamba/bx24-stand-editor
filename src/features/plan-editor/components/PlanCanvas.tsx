@@ -607,6 +607,38 @@ function FurnitureShape({ object, selected, onSelect, onDragStart, onDragMove, o
   const boxHeight = rotated ? width : height;
   // Konva вращает вокруг левого верхнего угла, поэтому картинку возвращаем в рамку сдвигом.
   const shift = imageShift(meta.rotation, width, height);
+  const look = plainWallIds.has(meta.itemId) ? "wall" : meta.itemId === "dver-razdvizhnaya" ? "sliding-door" : "picture";
+
+  if (look !== "picture") {
+    // Стены и раздвижная дверь — условные обозначения, как на строительном плане:
+    // стена — сплошная чёрная полоса по периметру, дверь — чёрный зигзаг.
+    // Рисуются вдоль панели, поэтому поворачиваются вместе с ней.
+    const color = selected ? "#0b57d0" : "#111827";
+    const teeth = Math.max(4, Math.round(width / Math.max(height, 1)));
+    const zigzag = Array.from({ length: teeth + 1 }, (_, index) => [(width * index) / teeth, index % 2 === 0 ? height * 0.1 : height * 0.9]).flat();
+
+    return (
+      <Group
+        id={object.id}
+        x={origin.x}
+        y={origin.y}
+        draggable
+        onClick={(event) => onSelect(event.evt.ctrlKey || event.evt.metaKey)}
+        onTap={() => onSelect(false)}
+        onDragStart={onDragStart}
+        onDragMove={onDragMove}
+        onDragEnd={onDragEnd}
+      >
+        {/* Прозрачная подложка ловит щелчок по всей рамке, а не только по линиям зигзага. */}
+        <Rect width={boxWidth} height={boxHeight} fill={look === "wall" ? color : "rgba(0,0,0,0.001)"} stroke={selected && look !== "wall" ? "#0b57d0" : undefined} strokeWidth={1} />
+        {look === "sliding-door" ? (
+          <Group x={shift.x} y={shift.y} rotation={meta.rotation} listening={false}>
+            <Line points={zigzag} stroke={color} strokeWidth={Math.max(1.5, height * 0.18)} lineJoin="miter" lineCap="square" />
+          </Group>
+        ) : null}
+      </Group>
+    );
+  }
 
   return (
     <Group
@@ -794,6 +826,9 @@ function FriezeLabel({
     </Group>
   );
 }
+
+/** Глухие стеновые панели — рисуются сплошной чёрной полосой. Стена с занавеской и стеклом — картинкой. */
+const plainWallIds = new Set(["wall_1", "wall_05", "stena-10", "stena-05"]);
 
 /** Слой рисования предмета: 0 — стены и полосы, 1 — мебель, 2 — свет. */
 function drawLayer(object: CanvasObject): number {
