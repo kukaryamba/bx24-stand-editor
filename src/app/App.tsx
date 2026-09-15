@@ -3,6 +3,7 @@ import { Download, FileText, Grid2x2, Hand, ImageUp, MousePointer2, PenTool, Red
 import { DealSyncPanel } from "../features/plan-editor/components/DealSyncPanel";
 import { FurniturePalette } from "../features/plan-editor/components/FurniturePalette";
 import { InstallScreen } from "../features/plan-editor/components/InstallScreen";
+import { InvoiceImportDialog } from "../features/plan-editor/components/InvoiceImportDialog";
 import { PlanLibrary } from "../features/plan-editor/components/PlanLibrary";
 import { PlanCanvas } from "../features/plan-editor/components/PlanCanvas";
 import { PropertiesPanel } from "../features/plan-editor/components/PropertiesPanel";
@@ -46,6 +47,7 @@ export function App() {
   const [startupError, setStartupError] = useState<string | null>(null);
   const [showSpecification, setShowSpecification] = useState(false);
   const [showPassport, setShowPassport] = useState(false);
+  const [showInvoices, setShowInvoices] = useState(false);
   const [skipInstall, setSkipInstall] = useState(false);
   const [gridNotice, setGridNotice] = useState<string | null>(null);
   /**
@@ -426,6 +428,11 @@ export function App() {
             </button>
             <p>Стены, фриз и мебель по площади стенда из прайса. Заменяет всё, что стоит на площадке, — вернуть можно через Undo.</p>
 
+            <button type="button" onClick={() => setShowInvoices(true)}>
+              Добавить оборудование из счетов PDF
+            </button>
+            <p>Доп. оборудование из счетов встанет под площадкой — дальше расставьте его сами.</p>
+
             <h2>Схема стенда</h2>
             <div className="stand-templates stand-schemes">
               {standTemplates.map((template) => {
@@ -576,6 +583,7 @@ export function App() {
 
       {showSpecification ? <SpecificationDialog onClose={() => setShowSpecification(false)} /> : null}
       {showPassport ? <StandPassport onClose={() => setShowPassport(false)} /> : null}
+      {showInvoices ? <InvoiceImportDialog onClose={() => setShowInvoices(false)} /> : null}
     </div>
   );
 }

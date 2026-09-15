@@ -1255,3 +1255,61 @@ p {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Загрузка счетов: таблица позиций прокручивается внутри окна. */
+.modal.invoice-import {
+  width: min(960px, 100%);
+}
+
+.invoice-import__files {
+  display: grid;
+  gap: 6px;
+  color: #4b5563;
+  font-size: 13px;
+}
+
+.invoice-import__summary p {
+  margin: 4px 0;
+}
+
+.invoice-import__table {
+  overflow: auto;
+  border: 1px solid #e3e7ed;
+}
+
+.invoice-import__table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.invoice-import__table th,
+.invoice-import__table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #eef1f4;
+  text-align: left;
+  vertical-align: top;
+}
+
+.invoice-import__table th {
+  position: sticky;
+  top: 0;
+  background: #f6f8fa;
+}
+
+.invoice-import__table td:nth-child(2) {
+  white-space: nowrap;
+}
+
+.invoice-import__table select {
+  width: 100%;
+  min-width: 220px;
+}
+
+.invoice-import__table tr.is-skipped td {
+  color: #9aa3ad;
+}
+
+.invoice-import__table tr.is-undecided td {
+  background: #fff7e0;
+}

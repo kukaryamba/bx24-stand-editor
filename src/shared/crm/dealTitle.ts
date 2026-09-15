@@ -40,7 +40,7 @@ const standNumberPattern = /(?<![\p{L}\d])(\p{L}{1,3} ?\d{1,4}\s*[-–—]\s*\d{
  */
 export function standNumberFromTitle(title: string | null): string | null {
   const match = title?.match(standNumberPattern);
-  return match ? match[1].replace(/\s*[-–—]\s*/u, "-").replace(/\s+/gu, "").toUpperCase() : null;
+  return match ? toLatin(match[1].replace(/\s*[-–—]\s*/u, "-").replace(/\s+/gu, "").toUpperCase()) : null;
 }
 
 /**
@@ -80,6 +80,17 @@ export async function loadDealTitles(dealIds: string[]): Promise<Map<string, str
   const result = new Map<string, string | null>();
   for (const id of unique) result.set(id, (await titles.get(id)) ?? null);
   return result;
+}
+
+/**
+ * Русские буквы, похожие на латинские, — латинскими. В одном счёте «Е 3-1»
+ * набрано русской Е, в другом «D 2-1» латиницей; на вид «Е3-1» и «E3-1»
+ * одинаковы, но не совпадают — ни поиском, ни сортировкой.
+ */
+const cyrillicLookalikes: Record<string, string> = { А: "A", В: "B", Е: "E", К: "K", М: "M", Н: "H", О: "O", Р: "P", С: "C", Т: "T", Х: "X" };
+
+function toLatin(value: string): string {
+  return value.replace(/[АВЕКМНОРСТХ]/gu, (letter) => cyrillicLookalikes[letter] ?? letter);
 }
 
 /** Организационно-правовые формы: в заголовке они только занимают место. */

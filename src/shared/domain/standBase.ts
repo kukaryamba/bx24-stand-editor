@@ -38,8 +38,15 @@ function baseColumn(areaM2: number): number {
   return index === -1 ? upper.length : index;
 }
 
+/**
+ * Больше этой площади базы нет: у больших стендов мебель и свет — всё по счёту.
+ * Стены и фриз остаются: это застройка, а не комплектация.
+ */
+export const baseMaxAreaM2 = 20;
+
 /** Сколько штук позиции входит в базу стенда такой площади. */
 export function baseQuantity(itemId: string, areaM2: number): number {
+  if (areaM2 > baseMaxAreaM2 + 1e-6) return 0;
   return baseTable[itemId]?.[baseColumn(areaM2)] ?? 0;
 }
 

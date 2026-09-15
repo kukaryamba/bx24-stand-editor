@@ -122,6 +122,12 @@ type EditorState = {
   deleteObject: (objectId: string) => void;
   addFurniture: (itemId: string, position: Point) => void;
   moveFurniture: (objectId: string, origin: Point) => void;
+  /**
+   * Кладёт предметы (например, из счёта) рядом с площадкой, под её нижним краем,
+   * рядами — оттуда их растаскивают по местам. Одним шагом истории; все
+   * добавленные выделяются, чтобы их можно было сразу перетащить группой.
+   */
+  addFurnitureBatch: (itemIds: string[]) => void;
   /** Сдвигает несколько объектов разом на одно смещение — одним шагом истории. */
   moveObjects: (objectIds: string[], delta: Point) => void;
   rotateFurniture: (objectId: string) => void;
@@ -152,7 +158,8 @@ type EditorState = {
   /** Меняет габариты площадки стенда в метрах. */
   resizeStandPlan: (widthM: number, depthM: number) => void;
   /** Расставляет стены по типовой схеме, заменяя прежние. */
-  applyStandTemplate: (templateId: StandTemplateId) => void;
+  /** fresh — поставить схему в исходном повороте, даже если она уже стоит (например, из счёта). */
+  applyStandTemplate: (templateId: StandTemplateId, fresh?: boolean) => void;
   /** Заменяет всё на площадке базовой комплектацией по площади. Одним шагом истории. Без id — открытая площадка. */
   applyBaseKit: (floorPlanId?: string) => void;
   zoomIn: () => void;
@@ -458,6 +465,48 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     commitProject(set, get, { ...project, objects: [...project.objects, object] });
     set({ selectedObjectId: objectId, selectedObjectIds: [objectId], tool: "select" });
   },
+  addFurnitureBatch: (itemIds) => {
+    const state = get();
+    const project = state.project;
+    const floorPlan = getFloorPlan(project, state.activeFloorPlanId);
+    if (!project || !floorPlan || itemIds.length === 0) return;
+
+    const pxPerMeter = floorPlan.grid.cellSizePx / floorPlan.grid.metersPerCell;
+    const gap = 0.2 * pxPerMeter;
+    const rowWidth = Math.max(floorPlan.width, 3 * pxPerMeter);
+    let x = 0;
+    let y = floorPlan.height + 0.5 * pxPerMeter;
+    let rowHeight = 0;
+
+    const added: CanvasObject[] = [];
+    for (const itemId of itemIds) {
+      const item = getFurnitureItem(itemId);
+      if (!item) continue;
+      const width = item.widthM * pxPerMeter;
+      const height = item.depthM * pxPerMeter;
+      if (x > 0 && x + width > rowWidth) {
+        x = 0;
+        y += rowHeight + gap;
+        rowHeight = 0;
+      }
+
+      added.push({
+        id: createId("furniture"),
+        floorPlanId: floorPlan.id,
+        layerId: getLayerId(project, floorPlan.id, "stands"),
+        kind: "equipment",
+        name: item.title,
+        shape: { kind: "rectangle", origin: { x, y }, width, height },
+        meta: { furniture: { itemId: item.id, rotation: 0 } },
+      });
+      x += width + gap;
+      rowHeight = Math.max(rowHeight, height);
+    }
+
+    commitProject(set, get, { ...project, objects: [...project.objects, ...added] });
+    const ids = added.map((object) => object.id);
+    set({ selectedObjectId: ids.length === 1 ? ids[0] : null, selectedObjectIds: ids, tool: "select", validationMessage: null });
+  },
   moveObjects: (objectIds, delta) => {
     const project = get().project;
     if (!project || (delta.x === 0 && delta.y === 0)) return;
@@ -759,7 +808,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     commitProject(set, get, { ...project, objects: [...kept, ...base] });
     set({ selectedObjectId: null, selectedObjectIds: [], validationMessage: null, lastTemplate: null });
   },
-  applyStandTemplate: (templateId) => {
+  applyStandTemplate: (templateId, fresh = false) => {
     const state = get();
     const project = state.project;
     const plan = getFloorPlan(project, state.activeFloorPlanId);
@@ -769,7 +818,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     // Повторное нажатие той же схемы на той же площадке — следующий поворот.
     const last = state.lastTemplate;
     const turns =
-      last && last.floorPlanId === plan.id && last.templateId === templateId ? (last.turns + 1) % templateVariants(template) : 0;
+      !fresh && last && last.floorPlanId === plan.id && last.templateId === templateId ? (last.turns + 1) % templateVariants(template) : 0;
 
     const layerId = getLayerId(project, plan.id, "stands");
     const walls = buildTemplateWalls(rotateTemplate(template, turns), plan, layerId, createId);
