@@ -1339,3 +1339,54 @@ p {
   background: #ffffff;
   color: #111827;
 }
+
+/*
+ * Вкладка печати паспорта: документ без окна вокруг. В приложении у окна
+ * ограничена высота и своя прокрутка — во вкладке документ идёт целиком.
+ */
+body.print-tab {
+  height: auto;
+  overflow: auto;
+  background: #ffffff;
+}
+
+body.print-tab .modal {
+  max-height: none;
+  margin: 0 auto;
+  border: 0;
+  overflow: visible;
+}
+
+body.print-tab .modal__head,
+body.print-tab .modal__actions {
+  display: none;
+}
+
+/* Полоса с кнопкой печати во вкладке паспорта — на бумагу не попадает. */
+.print-tab__bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 900px;
+  margin: 12px auto;
+  padding: 10px 14px;
+  border: 1px solid #d9dee7;
+  background: #f6f8fa;
+  font-size: 13px;
+  color: #374151;
+}
+
+.print-tab__bar button {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid #1a73e8;
+  background: #1a73e8;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+@media print {
+  .print-tab__bar {
+    display: none;
+  }
+}
