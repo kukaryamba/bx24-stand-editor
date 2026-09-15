@@ -33,6 +33,8 @@ export const priceCatalog2026: FurnitureItem[] = [
   { id: "stoyka-r05", catalogId: "202a", title: "Стойка информационная R-0,5 м", category: "tables", widthM: 1, depthM: 0.5, image: "stoyka-r05.svg", source: "price2026" },
   { id: "stoyka-r10", catalogId: "202", title: "Стойка информационная R-1 м", category: "tables", widthM: 1, depthM: 1, image: "stoyka-r10.svg", source: "price2026" },
   { id: "stoyka-1x05", catalogId: "203", title: "Стойка информационная 1 x 0,5 м", category: "tables", widthM: 1, depthM: 0.5, image: "stoyka-1x05.svg", source: "price2026" },
+  // Добавлен вручную, мимо генератора каталога.
+  { id: "stol-podium", catalogId: "205", title: "Стол-подиум 1 x 0,5 м, h=0,75 м", category: "tables", widthM: 1, depthM: 0.5, image: "stol-podium.svg", source: "price2026" },
   { id: "stoyka-uzkaya-polka", catalogId: "211", title: "Стойка с узкой верхней полкой 1 x 0,5 м", category: "tables", widthM: 1, depthM: 0.5, image: "stoyka-uzkaya-polka.svg", source: "price2026" },
   { id: "stellazh-plastmassovyy", catalogId: "", title: "Стеллаж пластмассовый, 5 полок", category: "storage", widthM: 1, depthM: 0.4, image: "stellazh-plastmassovyy.svg", source: "price2026" },
   { id: "vitrina-nizkaya-05x05", catalogId: "214", title: "Витрина низкая 0,5 x 0,5 м", category: "storage", widthM: 0.5, depthM: 0.5, image: "vitrina-nizkaya-05x05.svg", source: "price2026" },
@@ -43,7 +45,7 @@ export const priceCatalog2026: FurnitureItem[] = [
   { id: "vitrina-vysokaya-1x05", catalogId: "217", title: "Витрина высокая 1 x 0,5 м", category: "storage", widthM: 1, depthM: 0.5, image: "vitrina-vysokaya-1x05.svg", source: "price2026" },
   { id: "vitrina-radiusnaya-r05-h25", catalogId: "219", title: "Витрина радиусная R-0,5 м, h=2,5 м", category: "storage", widthM: 0.5, depthM: 0.5, image: "vitrina-radiusnaya-r05-h25.svg", source: "price2026" },
   { id: "vitrina-radiusnaya-r10-h25", catalogId: "218", title: "Витрина радиусная R-1 м, h=2,5 м", category: "storage", widthM: 1, depthM: 1, image: "vitrina-radiusnaya-r10-h25.svg", source: "price2026" },
-  { id: "shkaf-arhivnyy", catalogId: "220", title: "Шкаф архивный 1 x 0,5 м", category: "storage", widthM: 1, depthM: 0.5, image: "shkaf-arhivnyy.svg", source: "price2026" },
+  { id: "shkaf-arhivnyy", catalogId: "220", title: "Шкаф архивный 1 x 0,5 м, h=1 м", category: "storage", widthM: 1, depthM: 0.5, image: "shkaf-arhivnyy.svg", source: "price2026" },
   { id: "stul-polumyagkiy", catalogId: "624", title: "Стул полумягкий", category: "seating", widthM: 0.5, depthM: 0.5, image: "stul-polumyagkiy.svg", source: "price2026" },
   { id: "stul-barnyy-z", catalogId: "629", title: "Стул барный Z, чёрный", category: "seating", widthM: 0.4, depthM: 0.4, image: "stul-barnyy-z.svg", source: "price2026" },
   { id: "stul-barnyy-latina", catalogId: "629a", title: "Стул барный Latina, белый", category: "seating", widthM: 0.4, depthM: 0.4, image: "stul-barnyy-latina.svg", source: "price2026" },
