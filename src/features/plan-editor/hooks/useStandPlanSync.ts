@@ -39,6 +39,15 @@ export function useStandPlanSync(plan: FloorPlan | null, enabled: boolean): stri
     void loadStandPlan(dealId)
       .then((payload) => {
         if (cancelled || !payload) return;
+        // В сделке пустой план, а на площадке уже стоит базовая комплектация —
+        // оставляем базу, она и уедет в сделку. Иначе пустой план из сделки
+        // стирал базу через секунду после открытия.
+        const current = useEditorStore.getState().project?.objects.filter((object) => object.floorPlanId === planId && object.kind === "equipment") ?? [];
+        if (payload.objects.length === 0 && current.length > 0) {
+          saved.current.set(planId, JSON.stringify(payload.objects));
+          setError(null);
+          return;
+        }
         replacePlanObjects(planId, payload.objects);
         saved.current.set(planId, JSON.stringify(payload.objects));
         setError(null);

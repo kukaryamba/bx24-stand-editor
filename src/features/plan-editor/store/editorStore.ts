@@ -151,6 +151,8 @@ type EditorState = {
   resizeStandPlan: (widthM: number, depthM: number) => void;
   /** Расставляет стены по типовой схеме, заменяя прежние. */
   applyStandTemplate: (templateId: StandTemplateId) => void;
+  /** Заменяет всё на площадке базовой комплектацией по площади. Одним шагом истории. */
+  applyBaseKit: () => void;
   zoomIn: () => void;
   zoomOut: () => void;
   fitToScreen: () => void;
@@ -704,6 +706,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...project,
       floorPlans: project.floorPlans.map((item) => (item.id === plan.id ? nextPlan : item)),
     });
+  },
+  applyBaseKit: () => {
+    const state = get();
+    const project = state.project;
+    const plan = getFloorPlan(project, state.activeFloorPlanId);
+    if (!project || !plan || plan.kind !== "stand") return;
+
+    const base = buildBaseObjects(plan, getLayerId(project, plan.id, "stands"), createId);
+    const kept = project.objects.filter((object) => object.floorPlanId !== plan.id || object.kind !== "equipment");
+
+    commitProject(set, get, { ...project, objects: [...kept, ...base] });
+    set({ selectedObjectId: null, selectedObjectIds: [], validationMessage: null, lastTemplate: null });
   },
   applyStandTemplate: (templateId) => {
     const state = get();

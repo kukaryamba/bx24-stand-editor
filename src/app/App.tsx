@@ -79,6 +79,7 @@ export function App() {
   const renameExhibition = useEditorStore((state) => state.renameExhibition);
   const applyStandTemplate = useEditorStore((state) => state.applyStandTemplate);
   const lastTemplate = useEditorStore((state) => state.lastTemplate);
+  const applyBaseKit = useEditorStore((state) => state.applyBaseKit);
   const setFloorPlanBackground = useEditorStore((state) => state.setFloorPlanBackground);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
@@ -408,6 +409,12 @@ export function App() {
             </div>
 
             <p>Площадь стенда: {(standSize.width * standSize.depth).toFixed(1).replace(".", ",")} м². Клетка сетки — 1 x 1 м.</p>
+
+            <h2>Базовая комплектация</h2>
+            <button type="button" className="primary-action" onClick={applyBaseKit}>
+              Расставить базу «Стандарт»
+            </button>
+            <p>Стены, фриз и мебель по площади стенда из прайса. Заменяет всё, что стоит на площадке, — вернуть можно через Undo.</p>
 
             <h2>Схема стенда</h2>
             <div className="stand-templates stand-schemes">
