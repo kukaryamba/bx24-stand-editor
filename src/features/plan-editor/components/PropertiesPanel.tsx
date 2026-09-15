@@ -27,7 +27,7 @@ function round2(value: number): number {
  * В поле ввода часть текста красным не выделить, поэтому лишнее
  * показывается здесь, как и на самой панели.
  */
-function FriezeLabelHint({ label, custom }: { label: string; custom: boolean }) {
+function FriezeLabelHint({ label }: { label: string }) {
   const { fits, extra } = splitFriezeLabel(label);
   const count = Array.from(label).length;
 
@@ -40,8 +40,7 @@ function FriezeLabelHint({ label, custom }: { label: string; custom: boolean }) 
         </>
       ) : (
         <>Знаков {count} из {friezeMaxChars}.</>
-      )}{" "}
-      {custom ? "Сотрите, чтобы снова брать надпись из названия сделки." : "Пока взята из названия сделки до слова «стенд»."}
+      )}
     </p>
   );
 }
@@ -150,9 +149,10 @@ export function PropertiesPanel() {
                 // На площадке стенда надпись общая с анкетой паспорта: правка здесь меняет её там и на всех панелях.
                 <label>
                   Надпись
+                  {/* В поле сам текст, а не бледная подсказка: название компании правят, а не набирают заново. */}
                   <input
-                    value={furniture.label ?? frieze.passportText}
-                    placeholder={frieze.fromDeal || "ФРИЗ"}
+                    value={furniture.label ?? frieze.label}
+                    placeholder="ФРИЗ"
                     onChange={(event) => setStandFriezeText(frieze.standObjectId!, event.target.value)}
                   />
                 </label>
@@ -168,8 +168,19 @@ export function PropertiesPanel() {
               )}
               {furnitureItem.frieze ? (
                 <>
-                  <FriezeLabelHint label={furniture.label ?? frieze.label} custom={Boolean(furniture.label ?? frieze.passportText.trim())} />
-                  {frieze.standObjectId ? <p className="stand-hint">Та же надпись — в анкете паспорта внизу панели.</p> : null}
+                  <FriezeLabelHint label={furniture.label ?? frieze.label} />
+                  {frieze.standObjectId ? (
+                    <>
+                      <p className="stand-hint">
+                        {frieze.passportText === undefined ? "Название компании из сделки. " : ""}Та же надпись — в анкете паспорта внизу панели.
+                      </p>
+                      {frieze.passportText !== undefined && frieze.fromDeal && frieze.passportText !== frieze.fromDeal ? (
+                        <button type="button" onClick={() => setStandFriezeText(frieze.standObjectId!, null)}>
+                          Взять из сделки: {frieze.fromDeal}
+                        </button>
+                      ) : null}
+                    </>
+                  ) : null}
                 </>
               ) : (
                 <p className="stand-hint">Например, цвет плёнки. Пусто — на плане будет «ОКЛЕЙКА».</p>

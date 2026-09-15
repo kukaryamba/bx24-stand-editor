@@ -141,7 +141,7 @@ type EditorState = {
    * Панели стенда сбрасывают свои прежние надписи, чтобы не расходиться
    * с анкетой. Всё одним шагом истории.
    */
-  setStandFriezeText: (standObjectId: string, text: string) => void;
+  setStandFriezeText: (standObjectId: string, text: string | null) => void;
   /**
    * Номера стендов из названий их сделок. Мимо истории: это не правка
    * пользователя, а сверка с порталом, и Ctrl+Z не должен её отменять.
@@ -616,7 +616,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...project,
       objects: project.objects.map((item) => {
         if (item.id === standObjectId) {
-          return { ...item, meta: { ...item.meta, stand: { ...standMeta, passport: { ...standMeta.passport, friezeText: text } } } };
+          // null — вернуть надпись из сделки: убираем ответ из анкеты совсем.
+          const { friezeText: _previous, ...rest } = standMeta.passport ?? {};
+          const passport = text === null ? rest : { ...rest, friezeText: text };
+          return { ...item, meta: { ...item.meta, stand: { ...standMeta, passport } } };
         }
 
         const furniture = getObjectFurnitureMeta(item);

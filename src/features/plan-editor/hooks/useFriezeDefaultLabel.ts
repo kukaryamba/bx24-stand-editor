@@ -1,20 +1,21 @@
-import { friezeLabelFromTitle, useDealTitle } from "../../../shared/crm/dealTitle";
+import { companyName, useDealTitle } from "../../../shared/crm/dealTitle";
 import { getCanvasObject, getFloorPlan, getObjectStandMeta } from "../../../shared/domain/project";
 import { useEditorStore } from "../store/editorStore";
 
 /**
  * Надпись на фризе для открытой площадки стенда.
  *
- * Одна на стенд: сначала то, что вписано в анкету паспорта, а если там пусто —
- * название сделки до слова «стенд». Сделка берётся та, что закреплена
- * за стендом, а если её нет — та, из которой открыто приложение.
+ * Одна на стенд. Пока её не трогали, это название компании из сделки —
+ * без «ООО», кавычек, слова «стенд» и номера. Как только её поправили,
+ * хранится в анкете паспорта, в том числе пустая: стёртое поле не должно
+ * тут же снова заполняться из сделки, иначе надпись не набрать заново.
  */
 export function useFriezeLabels(): {
   /** Стенд открытой площадки — ему принадлежит надпись. Нет стенда — общий план. */
   standObjectId: string | null;
-  /** Вписанное в анкету. */
-  passportText: string;
-  /** Из названия сделки — подсказка, пока анкета пуста. */
+  /** Вписанное в анкету; undefined — не трогали, берётся из сделки. */
+  passportText: string | undefined;
+  /** Название компании из сделки. */
   fromDeal: string;
   /** Что в итоге написано на панелях. */
   label: string;
@@ -29,14 +30,14 @@ export function useFriezeLabels(): {
   const dealId = standMeta?.dealId ?? crm.dealId;
 
   const title = useDealTitle(dealId, crm.provider === "bitrix24");
-  const fromDeal = friezeLabelFromTitle(title);
-  const passportText = standMeta?.passport?.friezeText ?? "";
+  const fromDeal = companyName(title);
+  const passportText = standMeta?.passport?.friezeText;
 
   return {
     standObjectId: stand && standMeta ? stand.id : null,
     passportText,
     fromDeal,
-    label: passportText.trim() || fromDeal,
+    label: passportText ?? fromDeal,
   };
 }
 

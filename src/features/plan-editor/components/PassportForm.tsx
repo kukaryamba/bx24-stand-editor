@@ -24,7 +24,7 @@ function FriezeCount({ text, fromDeal }: { text: string; fromDeal: boolean }) {
     <span className={count > friezeLimit ? "passport-form__over" : "passport-form__count"}>
       Знаков: {count} из {friezeLimit}
       {count > friezeLimit ? " — больше, чем помещается на панели" : ""}
-      {fromDeal ? ". Пока взято из названия сделки" : ""}
+      {fromDeal ? ". Название компании из сделки" : ""}
       . Эта же надпись — на фризе стенда.
     </span>
   );
@@ -56,8 +56,9 @@ export function PassportForm({ standObjectId }: { standObjectId: string }) {
       <h2>Паспорт стенда</h2>
 
       {passportSlots.map((slot) => {
-        const value = answers[slot.id] ?? "";
         const isFrieze = slot.id === "friezeText";
+        // Надпись на фризе в поле сразу текстом — названием компании из сделки, пока её не правили.
+        const value = isFrieze ? frieze.label : (answers[slot.id] ?? "");
         const isFlag = slot.id === "selfBuild";
 
         return (
@@ -72,14 +73,12 @@ export function PassportForm({ standObjectId }: { standObjectId: string }) {
             ) : (
               <input
                 value={value}
-                placeholder={isFrieze ? frieze.fromDeal : slot.id === "carpetColor" ? baseCarpetColor : undefined}
+                placeholder={isFrieze ? "ФРИЗ" : slot.id === "carpetColor" ? baseCarpetColor : undefined}
                 onChange={(event) => change(slot.id, event.target.value)}
               />
             )}
 
-            {isFrieze && (value || frieze.fromDeal) ? (
-              <FriezeCount text={value || frieze.fromDeal} fromDeal={!value} />
-            ) : null}
+            {isFrieze ? <FriezeCount text={value} fromDeal={frieze.passportText === undefined && Boolean(frieze.fromDeal)} /> : null}
           </label>
         );
       })}

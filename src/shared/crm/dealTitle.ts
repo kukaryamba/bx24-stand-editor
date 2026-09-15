@@ -104,17 +104,24 @@ const companyMaxLength = 24;
  * без ООО, ИП и прочих форм и без кавычек; длинное обрезается многоточием.
  */
 export function companyShortName(title: string | null): string {
-  const company = friezeLabelFromTitle(title)
-    .replace(legalForms, " ")
-    .replace(/[«»"“”„']/gu, " ")
-    .replace(/\s+/gu, " ")
-    .replace(/^[\s,;:—–-]+|[\s,;:—–-]+$/gu, "");
-
+  const company = companyName(title);
   const chars = Array.from(company);
   return chars.length > companyMaxLength ? `${chars.slice(0, companyMaxLength - 1).join("").trimEnd()}…` : company;
 }
 
-/** Надпись по умолчанию: название сделки до слова «стенд». */
+/**
+ * Название компании из названия сделки целиком, без обрезки: до слова «стенд»
+ * и номера, без ООО, ИП и прочих форм и без кавычек. Им подписывают фриз.
+ */
+export function companyName(title: string | null): string {
+  return friezeLabelFromTitle(title)
+    .replace(legalForms, " ")
+    .replace(/[«»"“”„']/gu, " ")
+    .replace(/\s+/gu, " ")
+    .replace(/^[\s,;:—–-]+|[\s,;:—–-]+$/gu, "");
+}
+
+/** Название сделки до слова «стенд» — основа для названия компании. */
 export function friezeLabelFromTitle(title: string | null): string {
   if (!title) return "";
 
