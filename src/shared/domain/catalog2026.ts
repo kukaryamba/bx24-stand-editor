@@ -32,7 +32,7 @@ export const priceCatalog2026: FurnitureItem[] = [
   { id: "polka-steklyannaya", catalogId: "", title: "Полка стеклянная 0,97 x 0,47 м", category: "storage", widthM: 0.97, depthM: 0.47, image: "polka-steklyannaya.svg", source: "price2026" },
   { id: "stoyka-r05", catalogId: "202a", title: "Стойка информационная R-0,5 м", category: "tables", widthM: 1, depthM: 0.5, image: "stoyka-r05.svg", source: "price2026" },
   { id: "stoyka-r10", catalogId: "202", title: "Стойка информационная R-1 м", category: "tables", widthM: 1, depthM: 1, image: "stoyka-r10.svg", source: "price2026" },
-  { id: "stoyka-1x05", catalogId: "203", title: "Стойка информационная 1 x 0,5 м", category: "tables", widthM: 1, depthM: 0.5, image: "stoyka-1x05.svg", source: "price2026" },
+  { id: "stoyka-1x05", catalogId: "203", title: "Стойка информационная с внутренней полкой 1 x 0,5 м, h=1 м", category: "tables", widthM: 1, depthM: 0.5, image: "stoyka-1x05.svg", source: "price2026" },
   // Добавлен вручную, мимо генератора каталога.
   { id: "stol-podium", catalogId: "205", title: "Стол-подиум 1 x 0,5 м, h=0,75 м", category: "tables", widthM: 1, depthM: 0.5, image: "stol-podium.svg", source: "price2026" },
   { id: "stoyka-uzkaya-polka", catalogId: "211", title: "Стойка с узкой верхней полкой 1 x 0,5 м", category: "tables", widthM: 1, depthM: 0.5, image: "stoyka-uzkaya-polka.svg", source: "price2026" },

@@ -163,6 +163,7 @@ const itemRules: Array<[RegExp, string | string[]]> = [
   [/стойк\S*\s+информационн.*r\s*-?\s*0[,.]5/, "stoyka-r05"],
   [/стойк\S*\s+информационн.*r\s*-?\s*1/, "stoyka-r10"],
   [/стойк\S*.*узк/, "stoyka-uzkaya-polka"],
+  [/стойк\S*.*внутренн/, "stoyka-1x05"],
   [/стойк\S*\s+информационн/, ["stoyka-1x05", "stoyka-uzkaya-polka"]],
   [/стойк\S*\s+напольн.*панел|стойк\S*\s+под\s+(плазм|панел)/, "stoyka-pod-plazmu"],
   [/полк\S*.*наклон/, "polka-naklonnaya"],
