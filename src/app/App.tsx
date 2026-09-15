@@ -57,6 +57,8 @@ export function App() {
   const [portalError, setPortalError] = useState<string | null>(null);
   /** Пришла ли карта из портала. До этого автоматическая копия сохранила бы пустую заготовку. */
   const [portalReady, setPortalReady] = useState(false);
+  /** Запрос карты из портала завершён — удачно или нет. */
+  const [portalSettled, setPortalSettled] = useState(false);
   useAutoBackup(portalReady);
   useStandNumbersFromDeals();
   /** Что уже отправлено в портал — чтобы не слать одно и то же. */
@@ -92,7 +94,11 @@ export function App() {
   const historyFutureLength = useEditorStore((state) => state.historyFuture.length);
   const categoryAccess = useCategoryAccess(crm.provider === "bitrix24" && crm.placement === dealTabPlacement, crm.dealId);
   const activePlan = useMemo(() => getFloorPlan(project, activeFloorPlanId), [activeFloorPlanId, project]);
-  const standSyncError = useStandPlanSync(activePlan, crm.provider === "bitrix24");
+  // План стенда читается из сделки только после того, как пришла карта из портала.
+  // Раньше чтение успевало пройти по копии из браузера, а карта из портала,
+  // в которой предметов нет, приходила следом и стирала только что
+  // прочитанное — база мелькала и пропадала, а в сделку уходил пустой план.
+  const standSyncError = useStandPlanSync(activePlan, crm.provider === "bitrix24" && portalSettled);
   // Экран не хранится отдельно: он определяется тем, какой план открыт.
   // Иначе переход в стенд с карты не переключал бы панели.
   const screen: EditorScreen = getFloorPlanKind(activePlan);
@@ -154,6 +160,8 @@ export function App() {
       } catch (error) {
         if (cancelled) return;
         setPortalError(error instanceof Error ? error.message : "Не удалось получить карту выставки из портала.");
+      } finally {
+        if (!cancelled) setPortalSettled(true);
       }
     };
 
