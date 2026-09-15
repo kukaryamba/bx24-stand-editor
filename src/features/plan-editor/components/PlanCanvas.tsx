@@ -8,6 +8,7 @@ import type { CanvasObject, Point } from "../../../shared/domain/types";
 import { flattenPoints, polygonArea, polygonCentroid, snapPoint } from "../../../shared/geometry/polygon";
 import { maxScale, minScale, useEditorStore } from "../store/editorStore";
 import { useFriezeDefaultLabel } from "../hooks/useFriezeDefaultLabel";
+import { useStandCompanies } from "../hooks/useStandCompanies";
 import { carpetFill } from "../../../shared/domain/standBase";
 import { useImage } from "../hooks/useImage";
 import { registerStage } from "../stageRegistry";
@@ -56,6 +57,7 @@ export function PlanCanvas() {
   const floorPlan = useMemo(() => getFloorPlan(project, activeFloorPlanId), [activeFloorPlanId, project]);
   const layers = useMemo(() => getFloorPlanLayers(project, activeFloorPlanId), [activeFloorPlanId, project]);
   const objects = useMemo(() => getFloorPlanObjects(project, activeFloorPlanId), [activeFloorPlanId, project]);
+  const standCompanies = useStandCompanies(objects.filter((object) => object.kind === "stand"));
   const selectedObject = useMemo(() => getCanvasObject(project, selectedObjectId), [project, selectedObjectId]);
   const planStand = floorPlan?.standObjectId ? getCanvasObject(project, floorPlan.standObjectId) : null;
   const standCarpet = planStand ? getObjectStandMeta(planStand)?.passport?.carpetColor : undefined;
@@ -405,6 +407,7 @@ export function PlanCanvas() {
             <StandShape
               key={object.id}
               object={object}
+              company={standCompanies[object.id]}
               selected={selectedObjectIds.includes(object.id)}
               currentDeal={Boolean(crm.dealId && getObjectStandMeta(object)?.dealId === crm.dealId)}
               cellSizePx={floorPlan.grid.cellSizePx}
@@ -488,6 +491,8 @@ export function PlanCanvas() {
 
 type StandShapeProps = {
   object: CanvasObject;
+  /** Короткое название компании из сделки; пусто — стенд без сделки. */
+  company?: string;
   selected: boolean;
   currentDeal: boolean;
   draggable: boolean;
@@ -504,12 +509,27 @@ type DragHandlers = {
   onDragEnd: (event: Konva.KonvaEventObject<DragEvent>) => void;
 };
 
-function StandShape({ object, selected, currentDeal, draggable, cellSizePx, metersPerCell, onSelect, onOpen, onDragStart, onDragMove, onDragEnd }: StandShapeProps) {
+function StandShape({ object, company, selected, currentDeal, draggable, cellSizePx, metersPerCell, onSelect, onOpen, onDragStart, onDragMove, onDragEnd }: StandShapeProps) {
   const points = getObjectPoints(object);
   const center = polygonCentroid(points);
   const standMeta = getObjectStandMeta(object);
   const area = polygonArea(points, metersPerCell, cellSizePx);
   const fill = currentDeal ? currentDealColor : statusColors[standMeta?.status ?? "available"];
+
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  const boxWidth = Math.max(...xs) - Math.min(...xs);
+  const boxHeight = Math.max(...ys) - Math.min(...ys);
+  const labelBox = { x: Math.min(...xs) + 2, width: Math.max(boxWidth - 4, 10) };
+  const lines = [
+    { text: standMeta?.number ?? object.name, bold: true },
+    ...(company ? [{ text: company, bold: false }] : []),
+    { text: `${area} м²`, bold: false },
+  ];
+  // Шрифт по ширине и высоте стенда, не крупнее прежних 18.
+  // Стенд 2 x 3 м на карте ЦБСС — около 55 x 83 пикселей: номер влезает и восемнадцатым.
+  const fontSize = Math.max(6, Math.min(18, boxWidth / 3, (boxHeight * 0.9) / (lines.length * 1.15)));
+  const lineHeight = fontSize * 1.15;
 
   return (
     <Group
@@ -534,17 +554,27 @@ function StandShape({ object, selected, currentDeal, draggable, cellSizePx, mete
         shadowColor={selected ? "#1a73e8" : undefined}
         shadowBlur={selected ? 8 : 0}
       />
-      <Text
-        x={center.x - 45}
-        y={center.y - 14}
-        width={90}
-        align="center"
-        text={`${standMeta?.number ?? object.name}\n${area} м²`}
-        fill="#101820"
-        fontStyle="bold"
-        fontSize={18}
-        listening={false}
-      />
+      {/*
+        Подпись по ширине стенда: номер, компания, площадь. Длинное название
+        обрезается многоточием, а шрифт мельчает на узком стенде — иначе
+        подписи соседних стендов наезжали бы друг на друга.
+      */}
+      <Group x={labelBox.x} y={center.y - (lineHeight * lines.length) / 2} listening={false}>
+        {lines.map((line, index) => (
+          <Text
+            key={index}
+            y={index * lineHeight}
+            width={labelBox.width}
+            align="center"
+            text={line.text}
+            fill="#101820"
+            fontStyle={line.bold ? "bold" : "normal"}
+            fontSize={line.bold ? fontSize : fontSize * 0.85}
+            wrap="none"
+            ellipsis
+          />
+        ))}
+      </Group>
     </Group>
   );
 }
