@@ -1,74 +1,26 @@
-import { useState } from "react";
 import { isBitrixEnvironment } from "../../../shared/crm/bitrixApi";
-import { buildStandPlanPayload, loadStandPlan, payloadSizeKb, saveStandPlan } from "../../../shared/crm/standPlanRepository";
 import { getCanvasObject, getObjectStandMeta } from "../../../shared/domain/project";
 import { useEditorStore } from "../store/editorStore";
 
-type SyncState =
-  | { kind: "idle" }
-  | { kind: "busy"; text: string }
-  | { kind: "done"; text: string }
-  | { kind: "error"; text: string };
-
 /**
- * Обмен планом стенда с карточкой сделки.
+ * Сделка площадки стенда и состояние обмена с ней.
  *
- * Вне Битрикс24 панель показывает, почему сохранение недоступно, — так видно
- * разницу между «не настроено» и «сломалось».
+ * Кнопок «Сохранить в сделку» и «Загрузить из сделки» больше нет: план
+ * подтягивается из сделки при открытии и уходит обратно сам через пару секунд
+ * после правки. Кнопки остались от времени без автосохранения и только
+ * сбивали с толку — нажимать ли их. Здесь видно, куда сохраняется план,
+ * и понятная ошибка, если сохранить не удалось.
  */
-export function DealSyncPanel() {
-  const [state, setState] = useState<SyncState>({ kind: "idle" });
+export function DealSyncPanel({ error }: { error: string | null }) {
   const project = useEditorStore((s) => s.project);
-  const activeFloorPlanId = useEditorStore((s) => s.activeFloorPlanId);
   const activeStandObjectId = useEditorStore((s) => s.activeStandObjectId);
   const crm = useEditorStore((s) => s.crm);
-  const replacePlanObjects = useEditorStore((s) => s.replacePlanObjects);
 
-  // План сохраняется в сделку своего стенда. Сделка портала берётся запасным
-  // вариантом: приложение может быть открыто из карточки, где стенд ещё не привязан.
+  // План сохраняется в сделку своего стенда. Сделка портала — запасной вариант:
+  // приложение может быть открыто из карточки, где стенд ещё не привязан.
   const stand = activeStandObjectId ? getCanvasObject(project, activeStandObjectId) : null;
-  const standMeta = stand ? getObjectStandMeta(stand) : null;
-  const dealId = standMeta?.dealId ?? crm.dealId;
-
+  const dealId = (stand ? getObjectStandMeta(stand)?.dealId : null) ?? crm.dealId;
   const insideBitrix = isBitrixEnvironment();
-  const canSync = insideBitrix && Boolean(dealId);
-
-  const handleSave = async () => {
-    if (!project || !dealId) return;
-
-    const payload = buildStandPlanPayload(project, activeFloorPlanId);
-    setState({ kind: "busy", text: "Сохраняю в сделку..." });
-
-    try {
-      await saveStandPlan(dealId, payload);
-      setState({
-        kind: "done",
-        text: `Сохранено: ${payload.objects.length} предм. (${payloadSizeKb(payload)} КБ)`,
-      });
-    } catch (error) {
-      setState({ kind: "error", text: error instanceof Error ? error.message : "Не удалось сохранить план." });
-    }
-  };
-
-  const handleLoad = async () => {
-    if (!project || !dealId) return;
-    setState({ kind: "busy", text: "Загружаю из сделки..." });
-
-    try {
-      const payload = await loadStandPlan(dealId);
-      if (!payload) {
-        setState({ kind: "done", text: "В сделке пока нет сохранённого плана." });
-        return;
-      }
-
-      // Заменяем предметы только этого стенда: планы соседних стендов и карта
-      // выставки остаются нетронутыми, открытый план не меняется.
-      replacePlanObjects(activeFloorPlanId, payload.objects);
-      setState({ kind: "done", text: `Загружено предметов: ${payload.objects.length}` });
-    } catch (error) {
-      setState({ kind: "error", text: error instanceof Error ? error.message : "Не удалось загрузить план." });
-    }
-  };
 
   return (
     <div className="panel-section deal-sync">
@@ -76,35 +28,25 @@ export function DealSyncPanel() {
 
       <dl className="stand-facts">
         <div>
-          <dt>Источник</dt>
-          <dd>{insideBitrix ? "Битрикс24" : "локальный режим"}</dd>
-        </div>
-        <div>
           <dt>Номер сделки</dt>
           <dd>{dealId ?? "не привязана"}</dd>
         </div>
       </dl>
 
-      <button className="primary-action" onClick={handleSave} disabled={!canSync || state.kind === "busy"}>
-        Сохранить в сделку
-      </button>
+      {error ? <p className="deal-sync__status is-error">{error}</p> : null}
 
-      <button onClick={handleLoad} disabled={!canSync || state.kind === "busy"}>
-        Загрузить из сделки
-      </button>
+      {insideBitrix && dealId && !error ? (
+        <p className="deal-sync__hint">План стенда сохраняется в эту сделку сам, через пару секунд после каждой правки.</p>
+      ) : null}
 
-      {state.kind !== "idle" ? (
-        <p className={state.kind === "error" ? "deal-sync__status is-error" : "deal-sync__status"}>{state.text}</p>
+      {insideBitrix && !dealId ? (
+        <p className="deal-sync__hint">Стенд не привязан к сделке — план сохранять некуда. Привяжите сделку на общем плане.</p>
       ) : null}
 
       {!insideBitrix ? (
         <p className="deal-sync__hint">
-          Приложение открыто напрямую, а не из карточки сделки, поэтому портал недоступен. План сохраняется только в этом браузере.
+          Приложение открыто напрямую, а не из портала, поэтому план сохраняется только в этом браузере.
         </p>
-      ) : null}
-
-      {insideBitrix && !dealId ? (
-        <p className="deal-sync__hint">Не удалось определить сделку. Откройте приложение из карточки сделки.</p>
       ) : null}
     </div>
   );

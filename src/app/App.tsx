@@ -545,7 +545,7 @@ export function App() {
           </div>
         ) : null}
 
-        {screen === "stand" ? <DealSyncPanel /> : null}
+        {screen === "stand" ? <DealSyncPanel error={standSyncError} /> : null}
       </aside>
 
       <div

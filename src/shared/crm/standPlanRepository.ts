@@ -72,7 +72,3 @@ export async function loadStandPlan(dealId: string): Promise<StandPlanPayload | 
   }
 }
 
-/** Размер плана в килобайтах — чтобы предупредить о слишком тяжёлых планах. */
-export function payloadSizeKb(payload: StandPlanPayload): number {
-  return Math.round((new Blob([JSON.stringify(payload)]).size / 1024) * 10) / 10;
-}
