@@ -547,7 +547,9 @@ function StandShape({ object, company, selected, currentDeal, draggable, cellSiz
         points={flattenPoints(points)}
         closed
         fill={fill}
-        opacity={0.78}
+        // Непрозрачно: сквозь полупрозрачный стенд просвечивали линии и надписи подложки,
+        // и подпись стенда читалась плохо.
+        opacity={1}
         stroke={selected ? "#0b57d0" : "#253141"}
         strokeWidth={selected ? 4 : 2}
         lineJoin="round"
