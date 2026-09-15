@@ -140,9 +140,9 @@ export function getStandPlans(project: ExhibitionProject | null): FloorPlan[] {
   return project.floorPlans.filter((plan) => getFloorPlanKind(plan) === "stand");
 }
 
-/** Заголовок площадки стенда: номер и габариты. Один на создание, изменение размера и смену номера. */
+/** Заголовок площадки стенда: номер и площадь. Один на создание, изменение размера и смену номера. */
 export function standPlanTitle(standNumber: string | null, widthM: number, depthM: number): string {
-  const size = `${formatMeters(widthM)} x ${formatMeters(depthM)} м`;
+  const size = `${formatMeters(widthM * depthM)} м²`;
   return standNumber ? `Стенд ${standNumber} — ${size}` : `Стенд ${size}`;
 }
 

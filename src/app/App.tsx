@@ -371,7 +371,7 @@ export function App() {
         <input ref={backgroundUploadRef} type="file" accept="image/png,image/jpeg" className="visually-hidden" onChange={handleBackgroundUpload} />
 
         <div className="panel-section">
-          <h2>{activePlan?.title ?? "План"}</h2>
+          <h2>{screen === "stand" && activePlan ? <StandHeading plan={activePlan} /> : (activePlan?.title ?? "План")}</h2>
           <p>{startupError ?? portalError ?? standSyncError ?? gridNotice ?? "Сетка обязательна: все вершины стендов привязываются к узлам. Новый стенд создаётся кликами по сетке, замыкается кликом по первой точке."}</p>
         </div>
 

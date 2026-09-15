@@ -4,7 +4,7 @@ import type { FloorPlan } from "../../../shared/domain/types";
 import { useEditorStore } from "../store/editorStore";
 
 /**
- * Название стенда: «Стенд D4-1 · Ромашка — 2 x 3 м».
+ * Название стенда: «Стенд D4-1 · Ромашка — 6 м²».
  *
  * Одно на заголовок редактора и паспорт. Собирается при показе, а не берётся
  * из сохранённого: номер и название сделки меняются уже после того, как
@@ -23,5 +23,6 @@ export function useStandHeading(plan: FloorPlan | null): string {
   const size = getStandSizeMeters(plan);
   const number = standNumberFromTitle(title) ?? meta?.number;
   const name = [number ? `Стенд ${number}` : "Стенд", companyShortName(title)].filter(Boolean).join(" · ");
-  return `${name} — ${formatMeters(size.width)} x ${formatMeters(size.depth)} м`;
+  // Площадь, а не габариты: стенды продают по метрам, «2 x 3 м» приходится пересчитывать в уме.
+  return `${name} — ${formatMeters(size.width * size.depth)} м²`;
 }
