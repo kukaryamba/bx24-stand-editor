@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { furnitureCategories, getFurnitureByCategory, getFurnitureImageUrl } from "../../../shared/domain/furniture";
+import { furnitureCategories, getFurnitureByCategory, getFurnitureImageUrl, searchFurniture } from "../../../shared/domain/furniture";
 import type { FurnitureCategory, FurnitureSource } from "../../../shared/domain/types";
 import { useEditorStore } from "../store/editorStore";
 
@@ -16,7 +16,13 @@ export function FurniturePalette() {
   const addFurniture = useEditorStore((state) => state.addFurniture);
   const viewport = useEditorStore((state) => state.viewport);
 
-  const items = useMemo(() => getFurnitureByCategory(openCategory, source), [openCategory, source]);
+  const [query, setQuery] = useState("");
+  const searching = query.trim() !== "";
+  // Пока ищут, разделы не мешают: ищем сразу во всех.
+  const items = useMemo(
+    () => (searching ? searchFurniture(query, source) : getFurnitureByCategory(openCategory, source)),
+    [openCategory, query, searching, source],
+  );
 
   const handleAdd = (itemId: string) => {
     // Центр текущего вида в координатах плана.
@@ -40,7 +46,15 @@ export function FurniturePalette() {
         </button>
       </div>
 
-      <div className="furniture-palette__tabs">
+      <input
+        className="furniture-palette__search"
+        type="search"
+        value={query}
+        placeholder="Поиск: артикул или название"
+        onChange={(event) => setQuery(event.target.value)}
+      />
+
+      <div className="furniture-palette__tabs" hidden={searching}>
         {furnitureCategories.map((category) => (
           <button
             key={category.id}
@@ -52,6 +66,8 @@ export function FurniturePalette() {
           </button>
         ))}
       </div>
+
+      {searching && items.length === 0 ? <p className="furniture-palette__hint">Ничего не нашлось. Проверьте артикул или попробуйте часть названия.</p> : null}
 
       <div className="furniture-palette__grid">
         {items.map((item) => (
@@ -68,6 +84,7 @@ export function FurniturePalette() {
             </span>
             <span className="furniture-card__size">
               {formatSize(item.widthM)} x {formatSize(item.depthM)} м
+              {searching ? ` · ${furnitureCategories.find((category) => category.id === item.category)?.title ?? ""}` : ""}
             </span>
           </button>
         ))}

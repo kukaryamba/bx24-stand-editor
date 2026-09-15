@@ -1313,3 +1313,13 @@ p {
 .invoice-import__table tr.is-undecided td {
   background: #fff7e0;
 }
+
+/* Поиск в палитре предметов: по артикулу и названию во всех разделах. */
+.furniture-palette__search {
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid #cfd6df;
+  background: #ffffff;
+  color: #111827;
+}

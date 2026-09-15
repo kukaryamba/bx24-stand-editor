@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { loadInvoiceMappings, saveInvoiceMappings, type InvoiceMappings } from "../../../shared/crm/invoiceMappings";
 import { priceCatalog2026 } from "../../../shared/domain/catalog2026";
-import { getFurnitureItem } from "../../../shared/domain/furniture";
+import { furnitureCategories, getFurnitureItem } from "../../../shared/domain/furniture";
 import { getCanvasObject, getFloorPlan, getObjectStandMeta, getStandSizeMeters } from "../../../shared/domain/project";
 import { baseMaxAreaM2 } from "../../../shared/domain/standBase";
 import { standTemplates } from "../../../shared/domain/standTemplates";
@@ -32,7 +32,12 @@ type Row = {
   manual: boolean;
 };
 
-const catalogOptions = priceCatalog2026.filter((item) => !item.frieze && !item.film);
+const catalogGroups = furnitureCategories
+  .map((category) => ({
+    ...category,
+    items: priceCatalog2026.filter((item) => item.category === category.id && !item.frieze && !item.film),
+  }))
+  .filter((group) => group.items.length > 0);
 
 export function InvoiceImportDialog({ onClose }: { onClose: () => void }) {
   const project = useEditorStore((state) => state.project);
@@ -208,14 +213,17 @@ export function InvoiceImportDialog({ onClose }: { onClose: () => void }) {
                             ))}
                           </optgroup>
                         ) : null}
-                        <optgroup label="Весь каталог">
-                          {catalogOptions.map((item) => (
-                            <option key={item.id} value={item.id}>
-                              {item.catalogId ? `${item.catalogId} · ` : ""}
-                              {item.title}
-                            </option>
-                          ))}
-                        </optgroup>
+                        {/* Каталог по разделам — как в палитре предметов, иначе в длинном списке не найти. */}
+                        {catalogGroups.map((group) => (
+                          <optgroup key={group.id} label={group.title}>
+                            {group.items.map((item) => (
+                              <option key={item.id} value={item.id}>
+                                {item.catalogId ? `${item.catalogId} · ` : ""}
+                                {item.title}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
                       </select>
                     </td>
                   </tr>

@@ -107,6 +107,31 @@ export function getFurnitureImageUrl(item: FurnitureItem): string {
   return `${import.meta.env.BASE_URL}${folder}/${item.image}`;
 }
 
+/** Для поиска: регистр, ё, «х» и «*» в размерах не должны мешать совпадению. */
+function searchable(value: string): string {
+  return value.toLowerCase().replace(/ё/g, "е").replace(/[х*×]/g, "x").replace(/,/g, ".");
+}
+
+/**
+ * Поиск по артикулу и названию во всех разделах каталога.
+ *
+ * Каждое слово запроса должно найтись. Точное совпадение артикула — первым:
+ * по артикулу ищут, когда он уже известен из заявки, и нужен ровно он.
+ */
+export function searchFurniture(query: string, source: FurnitureSource = "price2026"): FurnitureItem[] {
+  const words = searchable(query).split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [];
+
+  const catalog = source === "price2026" ? priceCatalog2026 : furnitureCatalog;
+  const found = catalog.filter((item) => {
+    const haystack = searchable(`${item.catalogId} ${item.title}`);
+    return words.every((word) => haystack.includes(word));
+  });
+
+  const exact = words.length === 1 ? words[0] : null;
+  return found.sort((a, b) => Number(searchable(b.catalogId) === exact) - Number(searchable(a.catalogId) === exact));
+}
+
 export function getFurnitureByCategory(category: FurnitureCategory, source: FurnitureSource = "price2026"): FurnitureItem[] {
   const catalog = source === "price2026" ? priceCatalog2026 : furnitureCatalog;
   return catalog.filter((item) => item.category === category);
