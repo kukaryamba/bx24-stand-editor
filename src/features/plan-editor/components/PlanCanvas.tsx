@@ -154,7 +154,13 @@ export function PlanCanvas() {
   // иначе он есть, считается и сохраняется, но на плане его не видно.
   const visibleObjects = objects.filter((object) => visibleLayerIds.has(object.layerId) || !knownLayerIds.has(object.layerId));
   const standObjects = visibleObjects.filter((object) => object.kind === "stand");
-  const furnitureObjects = visibleObjects.filter((object) => object.kind === "equipment");
+  // Порядок рисования: стены, фриз и оклейка снизу, мебель над ними, свет на самом верху —
+  // споты крепят на стены и фриз, и они должны ложиться поверх, а не прятаться под панелью.
+  const furnitureObjects = visibleObjects
+    .filter((object) => object.kind === "equipment")
+    .map((object, index) => ({ object, index, layer: drawLayer(object) }))
+    .sort((a, b) => a.layer - b.layer || a.index - b.index)
+    .map((entry) => entry.object);
   const gridOffset: Point = { x: floorPlan.grid.offsetX ?? 0, y: floorPlan.grid.offsetY ?? 0 };
   // Длина фриза цепляется к полуметру: стенды и стены меряют в тех же шагах.
   const friezeStepPx = (floorPlan.grid.cellSizePx / floorPlan.grid.metersPerCell) * 0.5;
@@ -787,6 +793,14 @@ function FriezeLabel({
       {extra ? <Text x={-total / 2 + fitsWidth} y={-fontSize / 2} text={extra} fontSize={fontSize} fontStyle="bold" fill="#d93025" /> : null}
     </Group>
   );
+}
+
+/** Слой рисования предмета: 0 — стены и полосы, 1 — мебель, 2 — свет. */
+function drawLayer(object: CanvasObject): number {
+  const meta = getObjectFurnitureMeta(object);
+  const category = meta ? getFurnitureItem(meta.itemId)?.category : undefined;
+  if (category === "lighting") return 2;
+  return category === "walls" ? 0 : 1;
 }
 
 /**
