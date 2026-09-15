@@ -1323,3 +1323,10 @@ p {
   background: #ffffff;
   color: #111827;
 }
+
+/* Номер строки в списке оборудования паспорта. */
+.passport__table .passport__num {
+  width: 36px;
+  text-align: center;
+  white-space: nowrap;
+}

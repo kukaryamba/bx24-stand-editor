@@ -146,17 +146,21 @@ export function StandPassport({ onClose }: Props) {
             <table className="passport__table">
               <thead>
                 <tr>
+                  <th className="passport__num">№</th>
                   <th>ITEM // НАИМЕНОВАНИЕ</th>
                   <th>QUANTITY // КОЛИЧЕСТВО</th>
                   <th>PICTURE // ОБОЗНАЧЕНИЕ</th>
                 </tr>
               </thead>
               <tbody>
-                {specification.groups.flatMap((group) =>
-                  group.rows.map((row) => {
+                {/* Нумерация сквозная по всему списку: по номеру строки монтажники сверяются с заявкой. */}
+                {specification.groups
+                  .flatMap((group) => group.rows)
+                  .map((row, index) => {
                     const item = getFurnitureItem(row.itemId);
                     return (
                       <tr key={row.itemId}>
+                        <td className="passport__num">{index + 1}</td>
                         <td>{row.title}</td>
                         <td>
                           {row.quantity} {row.unit}
@@ -164,8 +168,7 @@ export function StandPassport({ onClose }: Props) {
                         <td>{item ? <img src={getFurnitureImageUrl(item)} alt="" /> : null}</td>
                       </tr>
                     );
-                  }),
-                )}
+                  })}
               </tbody>
             </table>
           )}
