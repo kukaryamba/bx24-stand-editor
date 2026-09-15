@@ -58,6 +58,8 @@ export const priceCatalog2026: FurnitureItem[] = [
   { id: "stol-70x70", catalogId: "621", title: "Стол квадратный 0,7 x 0,7 м", category: "tables", widthM: 0.7, depthM: 0.7, image: "stol-70x70.svg", source: "price2026" },
   { id: "stol-110x70", catalogId: "623", title: "Стол 1,1 x 0,7 м", category: "tables", widthM: 1.1, depthM: 0.7, image: "stol-110x70.svg", source: "price2026" },
   { id: "stol-kruglyy-d70", catalogId: "70", title: "Стол круглый D-0,7 м", category: "tables", widthM: 0.7, depthM: 0.7, image: "stol-kruglyy-d70.svg", source: "price2026" },
+  // Добавлен вручную, мимо генератора каталога.
+  { id: "stol-kruglyy-d80", catalogId: "625a", title: "Стол круглый D-0,8 м", category: "tables", widthM: 0.8, depthM: 0.8, image: "stol-kruglyy-d80.svg", source: "price2026" },
   { id: "stol-kruglyy-steklyannyy", catalogId: "630", title: "Стол круглый стеклянный", category: "tables", widthM: 0.7, depthM: 0.7, image: "stol-kruglyy-steklyannyy.svg", source: "price2026" },
   { id: "stol-barnyy", catalogId: "405", title: "Стол барный ЛДСП", category: "tables", widthM: 0.6, depthM: 0.6, image: "stol-barnyy.svg", source: "price2026" },
   { id: "stol-zhurnalnyy", catalogId: "606", title: "Журнальный стол стеклянный", category: "tables", widthM: 1, depthM: 0.6, image: "stol-zhurnalnyy.svg", source: "price2026" },
