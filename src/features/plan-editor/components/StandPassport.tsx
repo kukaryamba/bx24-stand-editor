@@ -107,10 +107,6 @@ export function StandPassport({ onClose }: Props) {
               {formatNumber(specification.areaM2)} м² ({formatNumber(size.width)} x {formatNumber(size.depth)})
             </dd>
           </div>
-          <div>
-            <dt>Perimeter // Периметр</dt>
-            <dd>{formatNumber(specification.perimeterM)} м</dd>
-          </div>
         </dl>
 
         {values.length > 0 ? (

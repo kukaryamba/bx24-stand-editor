@@ -52,10 +52,6 @@ export function SpecificationDialog({ onClose }: Props) {
             <dd>{formatNumber(specification.areaM2)} м²</dd>
           </div>
           <div>
-            <dt>Периметр</dt>
-            <dd>{formatNumber(specification.perimeterM)} м</dd>
-          </div>
-          <div>
             <dt>Предметов</dt>
             <dd>{specification.itemsCount}</dd>
           </div>

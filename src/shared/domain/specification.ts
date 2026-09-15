@@ -72,7 +72,6 @@ export function buildSpecification(project: ExhibitionProject | null, floorPlanI
 
   const size = plan ? getStandSizeMeters(plan) : { width: 0, depth: 0 };
   const areaM2 = round1(size.width * size.depth);
-  const perimeterM = round1((size.width + size.depth) * 2);
 
   const pricedSums = rows.map((row) => row.sumRub).filter((value): value is number => value !== undefined);
   const totalRub = pricedSums.length === rows.length && rows.length > 0 ? pricedSums.reduce((sum, value) => sum + value, 0) : undefined;
@@ -81,7 +80,6 @@ export function buildSpecification(project: ExhibitionProject | null, floorPlanI
     groups,
     itemsCount: objects.length,
     areaM2,
-    perimeterM,
     wallLengthM: round1(wallLengthM),
     friezeLengthM: round1(friezeLengthM),
     filmLengthM: round1(filmLengthM),
@@ -95,7 +93,6 @@ export function specificationToText(specification: Specification, standTitle: st
   const lines: string[] = [standTitle, ""];
 
   lines.push(`Площадь: ${formatNumber(specification.areaM2)} м²`);
-  lines.push(`Периметр: ${formatNumber(specification.perimeterM)} м`);
   if (specification.friezeLengthM > 0) {
     lines.push(`Фризовые панели: ${formatNumber(specification.friezeLengthM)} м`);
   }

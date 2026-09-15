@@ -74,7 +74,6 @@ export type Specification = {
   /** Всего предметов на плане. */
   itemsCount: number;
   areaM2: number;
-  perimeterM: number;
   /** Суммарная длина расставленных стеновых панелей, метры. */
   wallLengthM: number;
   /** Суммарная длина фризовых панелей, метры — их заказывают погонными метрами. */
