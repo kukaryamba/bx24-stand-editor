@@ -4,7 +4,6 @@ import { priceCatalog2026 } from "../../../shared/domain/catalog2026";
 import { furnitureCategories, getFurnitureItem } from "../../../shared/domain/furniture";
 import { getCanvasObject, getFloorPlan, getObjectStandMeta, getStandSizeMeters } from "../../../shared/domain/project";
 import { baseMaxAreaM2 } from "../../../shared/domain/standBase";
-import { standTemplates } from "../../../shared/domain/standTemplates";
 import { normalizeRowText, parseInvoice, pieces, type InvoiceMatch, type ParsedInvoice } from "../../../shared/invoice/parseInvoice";
 import { readPdfLines } from "../../../shared/invoice/pdfText";
 import { useEditorStore } from "../store/editorStore";
@@ -44,7 +43,6 @@ export function InvoiceImportDialog({ onClose }: { onClose: () => void }) {
   const activeFloorPlanId = useEditorStore((state) => state.activeFloorPlanId);
   const crm = useEditorStore((state) => state.crm);
   const addFurnitureBatch = useEditorStore((state) => state.addFurnitureBatch);
-  const applyStandTemplate = useEditorStore((state) => state.applyStandTemplate);
 
   const plan = getFloorPlan(project, activeFloorPlanId);
   const stand = plan?.standObjectId ? getCanvasObject(project, plan.standObjectId) : null;
@@ -56,7 +54,6 @@ export function InvoiceImportDialog({ onClose }: { onClose: () => void }) {
   const [invoices, setInvoices] = useState<Array<{ fileName: string; parsed: ParsedInvoice }>>([]);
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState<{ text: string; error?: boolean } | null>(null);
-  const [applyScheme, setApplyScheme] = useState(true);
 
   const inPortal = crm.provider === "bitrix24";
 
@@ -111,19 +108,18 @@ export function InvoiceImportDialog({ onClose }: { onClose: () => void }) {
   const choose = (key: string, choice: string) =>
     setRows((current) => current.map((row) => (row.key === key ? { ...row, choice, manual: true } : row)));
 
-  // Застройка из счетов: номер, площадь, схема — первое найденное.
+  // Застройка из счетов: номер и площадь — первое найденное. Схему из счёта
+  // («угловой» и т. п.) не предлагаем: стены расставляют сами, счёт их не знает.
   const found = useMemo(() => {
     const pick = <T,>(get: (parsed: ParsedInvoice) => T | null) => invoices.map((item) => get(item.parsed)).find((value) => value !== null) ?? null;
-    return { number: pick((p) => p.standNumber), area: pick((p) => p.areaM2), scheme: pick((p) => p.scheme) };
+    return { number: pick((p) => p.standNumber), area: pick((p) => p.areaM2) };
   }, [invoices]);
-  const schemeTitle = found.scheme ? standTemplates.find((template) => template.id === found.scheme)?.title : null;
 
   const toAdd = rows.filter((row) => row.choice && row.choice !== SKIP);
   const itemCount = toAdd.reduce((sum, row) => sum + row.count, 0);
   const undecided = rows.filter((row) => !row.choice).length;
 
   const add = async () => {
-    if (found.scheme && applyScheme) applyStandTemplate(found.scheme, true);
     addFurnitureBatch(toAdd.flatMap((row) => Array.from({ length: row.count }, () => row.choice)));
 
     // Запоминаем выбор, сделанный руками, — для этого названия в следующих счетах.
@@ -170,12 +166,6 @@ export function InvoiceImportDialog({ onClose }: { onClose: () => void }) {
             ) : null}
             {found.area !== null && found.area > baseMaxAreaM2 ? (
               <p className="stand-hint">Стенд больше {baseMaxAreaM2} м² — базовой комплектации нет, мебель и свет только по счёту.</p>
-            ) : null}
-            {schemeTitle ? (
-              <label className="checkbox-row">
-                <input type="checkbox" checked={applyScheme} onChange={(event) => setApplyScheme(event.target.checked)} />
-                Поставить схему «{schemeTitle}», как в счёте (стены заменятся)
-              </label>
             ) : null}
           </div>
         ) : null}
