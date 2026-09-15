@@ -833,7 +833,7 @@ function FriezeLabel({
 const plainWallIds = new Set(["wall_1", "wall_05", "stena-10", "stena-05"]);
 
 /** Предметы-значки, которые рисуются без белой рамки вокруг картинки. */
-const framelessIds = new Set(["veshalka-nastennaya", "korzina"]);
+const framelessIds = new Set(["veshalka-nastennaya", "korzina", "plazma-50"]);
 
 /** Слой рисования предмета: 0 — стены и полосы, 1 — мебель, 2 — свет. */
 function drawLayer(object: CanvasObject): number {
