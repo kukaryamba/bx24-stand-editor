@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30" width="30" height="30">
+  <title>Корзина для бумаг</title>
+  <defs>
+    <clipPath id="korzina-inside"><circle cx="15" cy="15" r="13"/></clipPath>
+  </defs>
+  <circle cx="15" cy="15" r="13" fill="#f7f8fa"/>
+  <!-- Сетка три на три — две линии поперёк и две вдоль, обрезанные кругом. -->
+  <g clip-path="url(#korzina-inside)" stroke="#5b6674" stroke-width="1.5">
+    <path d="M10.67 0 V30 M19.33 0 V30 M0 10.67 H30 M0 19.33 H30"/>
+  </g>
+  <circle cx="15" cy="15" r="13" fill="none" stroke="#5b6674" stroke-width="2.5"/>
+</svg>
