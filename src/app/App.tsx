@@ -411,7 +411,7 @@ export function App() {
             <p>Площадь стенда: {(standSize.width * standSize.depth).toFixed(1).replace(".", ",")} м². Клетка сетки — 1 x 1 м.</p>
 
             <h2>Базовая комплектация</h2>
-            <button type="button" className="primary-action" onClick={applyBaseKit}>
+            <button type="button" className="primary-action" onClick={() => applyBaseKit()}>
               Расставить базу «Стандарт»
             </button>
             <p>Стены, фриз и мебель по площади стенда из прайса. Заменяет всё, что стоит на площадке, — вернуть можно через Undo.</p>

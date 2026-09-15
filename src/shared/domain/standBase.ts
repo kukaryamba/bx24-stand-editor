@@ -43,8 +43,31 @@ export function baseQuantity(itemId: string, areaM2: number): number {
   return baseTable[itemId]?.[baseColumn(areaM2)] ?? 0;
 }
 
-/** Цвет ковра у всех стендов «Стандарт». */
-export const baseCarpetColor = "Синий";
+/** Цвет ковра по умолчанию у всех стендов «Стандарт». Меняется в анкете паспорта. */
+export const baseCarpetColor = "Серый";
+
+/**
+ * Заливка площадки на плане по цвету ковра из анкеты — бледная, чтобы предметы
+ * читались. Цвет пишут словом, поэтому узнаём по началу слова; незнакомый —
+ * серый, как ковёр по умолчанию.
+ */
+export function carpetFill(color: string | undefined): string {
+  const name = (color || baseCarpetColor).trim().toLowerCase().replace("ё", "е");
+  const fills: Array<[string, string]> = [
+    ["син", "#dfe8f7"],
+    ["голуб", "#e2f0f8"],
+    ["красн", "#f7e0e0"],
+    ["бордо", "#f0dde2"],
+    ["зелен", "#e1f1e4"],
+    ["беж", "#f3ece0"],
+    ["коричн", "#ece3da"],
+    ["черн", "#d9dbdf"],
+    ["желт", "#f8f2d8"],
+    ["оранж", "#f9e8d6"],
+    ["фиолет", "#ebe2f3"],
+  ];
+  return fills.find(([prefix]) => name.startsWith(prefix))?.[1] ?? "#e9ebee";
+}
 
 /** Толщина стеновой панели, метры — как у стен схемы. */
 const wall = 0.1;

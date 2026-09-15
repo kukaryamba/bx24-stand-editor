@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { getFurnitureItem } from "../../../shared/domain/furniture";
-import { baseCarpetColor, buildBaseObjects } from "../../../shared/domain/standBase";
+import { buildBaseObjects } from "../../../shared/domain/standBase";
 import { buildTemplateWalls, rotateTemplate, standTemplates, templateVariants, type StandTemplateId } from "../../../shared/domain/standTemplates";
 import {
   createStandFloorPlan,
@@ -151,8 +151,8 @@ type EditorState = {
   resizeStandPlan: (widthM: number, depthM: number) => void;
   /** Расставляет стены по типовой схеме, заменяя прежние. */
   applyStandTemplate: (templateId: StandTemplateId) => void;
-  /** Заменяет всё на площадке базовой комплектацией по площади. Одним шагом истории. */
-  applyBaseKit: () => void;
+  /** Заменяет всё на площадке базовой комплектацией по площади. Одним шагом истории. Без id — открытая площадка. */
+  applyBaseKit: (floorPlanId?: string) => void;
   zoomIn: () => void;
   zoomOut: () => void;
   fitToScreen: () => void;
@@ -633,18 +633,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     // Новая площадка сразу с базовой комплектацией по площади — допы добавят руками.
     // Если в сделке уже лежит план стенда, он при открытии заменит базу.
+    // Цвет ковра в анкету не вписываем: пустое поле и есть ковёр по умолчанию.
     const base = buildBaseObjects(plan, `${plan.id}-stands`, createId);
-    const standMeta = getObjectStandMeta(stand);
-    const standWithCarpet: CanvasObject =
-      standMeta && !standMeta.passport?.carpetColor
-        ? { ...stand, meta: { ...stand.meta, stand: { ...standMeta, passport: { ...standMeta.passport, carpetColor: baseCarpetColor } } } }
-        : stand;
 
     commitProject(set, get, {
       ...project,
       floorPlans: [...project.floorPlans, plan],
       layers: [...project.layers, ...layers],
-      objects: [...project.objects.map((item) => (item.id === standObjectId ? standWithCarpet : item)), ...base],
+      objects: [...project.objects, ...base],
     });
     set({
       activeFloorPlanId: plan.id,
@@ -707,10 +703,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       floorPlans: project.floorPlans.map((item) => (item.id === plan.id ? nextPlan : item)),
     });
   },
-  applyBaseKit: () => {
+  applyBaseKit: (floorPlanId) => {
     const state = get();
     const project = state.project;
-    const plan = getFloorPlan(project, state.activeFloorPlanId);
+    const plan = getFloorPlan(project, floorPlanId ?? state.activeFloorPlanId);
     if (!project || !plan || plan.kind !== "stand") return;
 
     const base = buildBaseObjects(plan, getLayerId(project, plan.id, "stands"), createId);

@@ -19,6 +19,7 @@ export function useStandPlanSync(plan: FloorPlan | null, enabled: boolean): stri
   const project = useEditorStore((state) => state.project);
   const crm = useEditorStore((state) => state.crm);
   const replacePlanObjects = useEditorStore((state) => state.replacePlanObjects);
+  const applyBaseKit = useEditorStore((state) => state.applyBaseKit);
 
   /** Площадки, которые уже подтянули: повторно перечитывать нельзя, затрёт правки. */
   const loaded = useRef(new Set<string>());
@@ -38,13 +39,15 @@ export function useStandPlanSync(plan: FloorPlan | null, enabled: boolean): stri
 
     void loadStandPlan(dealId)
       .then((payload) => {
-        if (cancelled || !payload) return;
-        // В сделке пустой план, а на площадке уже стоит базовая комплектация —
-        // оставляем базу, она и уедет в сделку. Иначе пустой план из сделки
-        // стирал базу через секунду после открытия.
+        if (cancelled) return;
         const current = useEditorStore.getState().project?.objects.filter((object) => object.floorPlanId === planId && object.kind === "equipment") ?? [];
-        if (payload.objects.length === 0 && current.length > 0) {
-          saved.current.set(planId, JSON.stringify(payload.objects));
+
+        // В сделке пусто. Если на площадке что-то стоит — оставляем, оно и уедет
+        // в сделку: иначе пустой план из сделки стирал базу через секунду после
+        // открытия. Если пусто и там — ставим базу: она входит в каждый стенд,
+        // а площадки, созданные до базы, так и открывались бы пустыми.
+        if (!payload || payload.objects.length === 0) {
+          if (current.length === 0) applyBaseKit(planId);
           setError(null);
           return;
         }
@@ -61,7 +64,7 @@ export function useStandPlanSync(plan: FloorPlan | null, enabled: boolean): stri
     return () => {
       cancelled = true;
     };
-  }, [active, dealId, planId, replacePlanObjects]);
+  }, [active, applyBaseKit, dealId, planId, replacePlanObjects]);
 
   useEffect(() => {
     if (!active || !planId || !dealId || !project) return;

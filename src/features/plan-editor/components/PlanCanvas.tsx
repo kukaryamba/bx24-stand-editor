@@ -8,6 +8,7 @@ import type { CanvasObject, Point } from "../../../shared/domain/types";
 import { flattenPoints, polygonArea, polygonCentroid, snapPoint } from "../../../shared/geometry/polygon";
 import { maxScale, minScale, useEditorStore } from "../store/editorStore";
 import { useFriezeDefaultLabel } from "../hooks/useFriezeDefaultLabel";
+import { carpetFill } from "../../../shared/domain/standBase";
 import { useImage } from "../hooks/useImage";
 import { registerStage } from "../stageRegistry";
 
@@ -53,6 +54,8 @@ export function PlanCanvas() {
   const layers = useMemo(() => getFloorPlanLayers(project, activeFloorPlanId), [activeFloorPlanId, project]);
   const objects = useMemo(() => getFloorPlanObjects(project, activeFloorPlanId), [activeFloorPlanId, project]);
   const selectedObject = useMemo(() => getCanvasObject(project, selectedObjectId), [project, selectedObjectId]);
+  const planStand = floorPlan?.standObjectId ? getCanvasObject(project, floorPlan.standObjectId) : null;
+  const standCarpet = planStand ? getObjectStandMeta(planStand)?.passport?.carpetColor : undefined;
   const backgroundImage = useImage(floorPlan?.background?.imageUrl ?? "");
 
   useEffect(() => {
@@ -324,8 +327,8 @@ export function PlanCanvas() {
         }}
       >
         <Layer listening={false}>
-          {/* Площадка стенда закрашена цветом ковра — синий у всех стендов «Стандарт». Бледно, чтобы предметы читались. */}
-          <Rect width={floorPlan.width} height={floorPlan.height} fill={floorPlan.kind === "stand" ? "#dfe8f7" : "#f8fafb"} stroke="#c8ced6" strokeWidth={2} />
+          {/* Площадка стенда закрашена цветом ковра из анкеты, по умолчанию серым. */}
+          <Rect width={floorPlan.width} height={floorPlan.height} fill={floorPlan.kind === "stand" ? carpetFill(standCarpet) : "#f8fafb"} stroke="#c8ced6" strokeWidth={2} />
           {visibleLayerIds.has(`${floorPlan.id}-background`) && backgroundImage ? (
             <Image image={backgroundImage} width={floorPlan.width} height={floorPlan.height} opacity={0.78} />
           ) : null}
