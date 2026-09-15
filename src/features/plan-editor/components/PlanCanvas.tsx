@@ -24,6 +24,8 @@ export function PlanCanvas() {
   const [marquee, setMarquee] = useState<{ start: Point; end: Point } | null>(null);
   /** Тянули ли мышь: без этого одиночный клик сойдёт за пустую рамку. */
   const marqueeMoved = useRef(false);
+  /** Выделенная группа, которую сейчас тянут: где стоял каждый узел в начале. */
+  const groupDrag = useRef<{ draggedId: string; starts: Map<string, { node: Konva.Node; x: number; y: number }> } | null>(null);
   // Размер холста живёт в store: по нему считается вписывание плана в экран.
   const stageSize = useEditorStore((state) => state.stageSize);
   const setStageSize = useEditorStore((state) => state.setStageSize);
@@ -45,6 +47,7 @@ export function PlanCanvas() {
   const friezeDefaultLabel = useFriezeDefaultLabel();
   const updateStand = useEditorStore((state) => state.updateStand);
   const moveFurniture = useEditorStore((state) => state.moveFurniture);
+  const moveObjects = useEditorStore((state) => state.moveObjects);
   const rotateFurniture = useEditorStore((state) => state.rotateFurniture);
   const openStandPlan = useEditorStore((state) => state.openStandPlan);
   const setViewport = useEditorStore((state) => state.setViewport);
@@ -216,7 +219,58 @@ export function PlanCanvas() {
     });
   };
 
+  /**
+   * Перетаскивание выделенной группы. Тянут один объект, остальные выделенные
+   * едут следом на то же смещение; на отпускании всё записывается одним шагом
+   * истории. Привязку к сетке задаёт объект, за который тянут.
+   */
+  const handleDragStart = (object: CanvasObject, event: Konva.KonvaEventObject<DragEvent>) => {
+    // Ручку длины фриза тянут внутри панели — это не перетаскивание объекта.
+    if (event.target !== event.currentTarget) return;
+    groupDrag.current = null;
+    if (!selectedObjectIds.includes(object.id) || selectedObjectIds.length < 2) return;
+
+    const stage = event.target.getStage();
+    if (!stage) return;
+    const starts = new Map<string, { node: Konva.Node; x: number; y: number }>();
+    for (const id of selectedObjectIds) {
+      const node = id === object.id ? event.target : stage.findOne(`#${id}`);
+      if (node) starts.set(id, { node, x: node.x(), y: node.y() });
+    }
+    groupDrag.current = { draggedId: object.id, starts };
+  };
+
+  const handleDragMove = (object: CanvasObject, event: Konva.KonvaEventObject<DragEvent>) => {
+    const group = groupDrag.current;
+    const start = group?.draggedId === object.id ? group.starts.get(object.id) : undefined;
+    if (!group || !start) return;
+
+    const dx = event.target.x() - start.x;
+    const dy = event.target.y() - start.y;
+    group.starts.forEach((item, id) => {
+      if (id !== object.id) item.node.position({ x: item.x + dx, y: item.y + dy });
+    });
+  };
+
+  /** Завершает перетаскивание группы; false — тянули одиночный объект. */
+  const finishGroupDrag = (object: CanvasObject, snappedPosition: Point): boolean => {
+    const group = groupDrag.current;
+    const start = group?.draggedId === object.id ? group.starts.get(object.id) : undefined;
+    groupDrag.current = null;
+    if (!group || !start) return false;
+
+    // Узлы возвращаем на места: новые позиции нарисует обновлённый проект.
+    group.starts.forEach((item) => item.node.position({ x: item.x, y: item.y }));
+    moveObjects([...group.starts.keys()], { x: snappedPosition.x - start.x, y: snappedPosition.y - start.y });
+    return true;
+  };
+
   const handleObjectDragEnd = (object: CanvasObject, event: Konva.KonvaEventObject<DragEvent>) => {
+    const snapped = floorPlan.grid.snap
+      ? snapPoint({ x: event.target.x(), y: event.target.y() }, floorPlan.grid.cellSizePx, gridOffset)
+      : { x: event.target.x(), y: event.target.y() };
+    if (finishGroupDrag(object, snapped)) return;
+
     const delta = floorPlan.grid.snap
       ? snapPoint({ x: event.target.x(), y: event.target.y() }, floorPlan.grid.cellSizePx, gridOffset)
       : { x: event.target.x(), y: event.target.y() };
@@ -231,6 +285,7 @@ export function PlanCanvas() {
     // К сетке цепляются только стены: по ним считают погонные метры панелей.
     // Мебель ставится свободно, ей середина клетки не мешает.
     const origin = floorPlan.grid.snap && isWallObject(object) ? snapWallEdges(object, raw, floorPlan.grid.cellSizePx, gridOffset) : raw;
+    if (finishGroupDrag(object, origin)) return;
     event.target.position(origin);
     moveFurniture(object.id, origin);
   };
@@ -357,6 +412,8 @@ export function PlanCanvas() {
               draggable={mode === "admin"}
               onSelect={(additive) => selectObject(object.id, additive)}
               onOpen={() => openStandPlan(object.id)}
+              onDragStart={(event) => handleDragStart(object, event)}
+              onDragMove={(event) => handleDragMove(object, event)}
               onDragEnd={(event) => handleObjectDragEnd(object, event)}
             />
           ))}
@@ -371,6 +428,8 @@ export function PlanCanvas() {
                 defaultLabel={stripKindOf(object) === "film" ? "ОКЛЕЙКА" : friezeDefaultLabel || "ФРИЗ"}
                 lengthStepPx={friezeStepPx}
                 onSelect={(additive) => selectObject(object.id, additive)}
+                onDragStart={(event) => handleDragStart(object, event)}
+                onDragMove={(event) => handleDragMove(object, event)}
                 onDragEnd={(event) => handleFurnitureDragEnd(object, event)}
                 onResize={(lengthPx) => updateFrieze(object.id, { lengthPx })}
               />
@@ -380,6 +439,8 @@ export function PlanCanvas() {
                 object={object}
                 selected={selectedObjectIds.includes(object.id)}
                 onSelect={(additive) => selectObject(object.id, additive)}
+                onDragStart={(event) => handleDragStart(object, event)}
+                onDragMove={(event) => handleDragMove(object, event)}
                 onDragEnd={(event) => handleFurnitureDragEnd(object, event)}
               />
             ),
@@ -434,10 +495,16 @@ type StandShapeProps = {
   metersPerCell: number;
   onSelect: (additive: boolean) => void;
   onOpen: () => void;
+} & DragHandlers;
+
+/** Перетаскивание объекта; начало и ход нужны, чтобы вместе с ним ехала выделенная группа. */
+type DragHandlers = {
+  onDragStart: (event: Konva.KonvaEventObject<DragEvent>) => void;
+  onDragMove: (event: Konva.KonvaEventObject<DragEvent>) => void;
   onDragEnd: (event: Konva.KonvaEventObject<DragEvent>) => void;
 };
 
-function StandShape({ object, selected, currentDeal, draggable, cellSizePx, metersPerCell, onSelect, onOpen, onDragEnd }: StandShapeProps) {
+function StandShape({ object, selected, currentDeal, draggable, cellSizePx, metersPerCell, onSelect, onOpen, onDragStart, onDragMove, onDragEnd }: StandShapeProps) {
   const points = getObjectPoints(object);
   const center = polygonCentroid(points);
   const standMeta = getObjectStandMeta(object);
@@ -446,11 +513,14 @@ function StandShape({ object, selected, currentDeal, draggable, cellSizePx, mete
 
   return (
     <Group
+      id={object.id}
       draggable={draggable}
       onClick={(event) => onSelect(event.evt.ctrlKey || event.evt.metaKey)}
       onTap={() => onSelect(false)}
       onDblClick={onOpen}
       onDblTap={onOpen}
+      onDragStart={onDragStart}
+      onDragMove={onDragMove}
       onDragEnd={onDragEnd}
     >
       <Line
@@ -483,10 +553,9 @@ type FurnitureShapeProps = {
   object: CanvasObject;
   selected: boolean;
   onSelect: (additive: boolean) => void;
-  onDragEnd: (event: Konva.KonvaEventObject<DragEvent>) => void;
-};
+} & DragHandlers;
 
-function FurnitureShape({ object, selected, onSelect, onDragEnd }: FurnitureShapeProps) {
+function FurnitureShape({ object, selected, onSelect, onDragStart, onDragMove, onDragEnd }: FurnitureShapeProps) {
   const meta = getObjectFurnitureMeta(object);
   const item = meta ? getFurnitureItem(meta.itemId) : undefined;
   const image = useImage(item ? getFurnitureImageUrl(item) : "");
@@ -503,11 +572,14 @@ function FurnitureShape({ object, selected, onSelect, onDragEnd }: FurnitureShap
 
   return (
     <Group
+      id={object.id}
       x={origin.x}
       y={origin.y}
       draggable
       onClick={(event) => onSelect(event.evt.ctrlKey || event.evt.metaKey)}
       onTap={() => onSelect(false)}
+      onDragStart={onDragStart}
+      onDragMove={onDragMove}
       onDragEnd={onDragEnd}
     >
       <Rect
@@ -552,9 +624,8 @@ type FriezeShapeProps = {
   /** Шаг, к которому цепляется длина при растягивании, в пикселях плана. */
   lengthStepPx: number;
   onSelect: (additive: boolean) => void;
-  onDragEnd: (event: Konva.KonvaEventObject<DragEvent>) => void;
   onResize: (lengthPx: number) => void;
-};
+} & DragHandlers;
 
 /**
  * Фризовая панель: растягивается в длину, а надпись остаётся прежнего размера.
@@ -566,7 +637,7 @@ type FriezeShapeProps = {
  * Всё рисуется в группе, повёрнутой вместе с панелью, поэтому ручка длины
  * у повёрнутой панели сама оказывается на её конце.
  */
-function FriezeShape({ object, kind, selected, defaultLabel, lengthStepPx, onSelect, onDragEnd, onResize }: FriezeShapeProps) {
+function FriezeShape({ object, kind, selected, defaultLabel, lengthStepPx, onSelect, onDragStart, onDragMove, onDragEnd, onResize }: FriezeShapeProps) {
   const meta = getObjectFurnitureMeta(object);
   if (object.shape.kind !== "rectangle" || !meta) return null;
 
@@ -582,11 +653,14 @@ function FriezeShape({ object, kind, selected, defaultLabel, lengthStepPx, onSel
 
   return (
     <Group
+      id={object.id}
       x={origin.x}
       y={origin.y}
       draggable
       onClick={(event) => onSelect(event.evt.ctrlKey || event.evt.metaKey)}
       onTap={() => onSelect(false)}
+      onDragStart={onDragStart}
+      onDragMove={onDragMove}
       onDragEnd={onDragEnd}
     >
       <Group x={shift.x} y={shift.y} rotation={meta.rotation}>

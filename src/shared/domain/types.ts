@@ -141,6 +141,11 @@ export type FloorPlan = {
   height: number;
   background: BackgroundImage | null;
   grid: GridSettings;
+  /**
+   * Какую часть плана показывать при открытии — прямоугольник в пикселях плана.
+   * Нет — план вписывается целиком. Хранится в плане, поэтому общий для всех.
+   */
+  startView?: { x: number; y: number; width: number; height: number };
 };
 
 export type ProjectLayer = {

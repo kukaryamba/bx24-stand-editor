@@ -122,6 +122,8 @@ type EditorState = {
   deleteObject: (objectId: string) => void;
   addFurniture: (itemId: string, position: Point) => void;
   moveFurniture: (objectId: string, origin: Point) => void;
+  /** Сдвигает несколько объектов разом на одно смещение — одним шагом истории. */
+  moveObjects: (objectIds: string[], delta: Point) => void;
   rotateFurniture: (objectId: string) => void;
   /**
    * Меняет надпись и длину фризовой панели. Длина — в пикселях плана,
@@ -157,6 +159,10 @@ type EditorState = {
   zoomOut: () => void;
   fitToScreen: () => void;
   setViewport: (viewport: Partial<Viewport>) => void;
+  /** Запоминает то, что сейчас видно на экране, как вид открытия плана — для всех. */
+  saveStartView: () => void;
+  /** Забывает вид открытия: план снова вписывается целиком. */
+  clearStartView: () => void;
   setStageSize: (size: StageSize) => void;
   undo: () => void;
   redo: () => void;
@@ -193,9 +199,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
    * уже после того, как пользователь начал работать.
    */
   applyPortalProject: (project) => {
+    const open = keepOpenPlan(project, get());
     set({
       project,
-      ...keepOpenPlan(project, get()),
+      ...open,
+      // Карта пришла из портала вместе с видом открытия — показываем его.
+      viewport: fitViewport(project, open.activeFloorPlanId, get().stageSize),
       selectedObjectId: null,
       selectedObjectIds: [],
       draftPoints: [],
@@ -448,6 +457,36 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     commitProject(set, get, { ...project, objects: [...project.objects, object] });
     set({ selectedObjectId: objectId, selectedObjectIds: [objectId], tool: "select" });
+  },
+  moveObjects: (objectIds, delta) => {
+    const project = get().project;
+    if (!project || (delta.x === 0 && delta.y === 0)) return;
+    const ids = new Set(objectIds);
+
+    let validationMessage: string | null = null;
+    const objects = project.objects.map((object) => {
+      if (!ids.has(object.id)) return object;
+      if (object.shape.kind === "rectangle") {
+        const { origin } = object.shape;
+        return { ...object, shape: { ...object.shape, origin: { x: origin.x + delta.x, y: origin.y + delta.y } } };
+      }
+
+      const points = getObjectPoints(object).map((point) => ({ x: point.x + delta.x, y: point.y + delta.y }));
+      const floorPlan = getFloorPlan(project, object.floorPlanId);
+      if (object.kind === "stand" && floorPlan) {
+        validationMessage ??= validateStandPolygon(points, floorPlan, [], object.id);
+      }
+      return withPolygonPoints(object, points);
+    });
+
+    // Стенд вышел за план — не двигаем ничего: группа должна ехать целиком.
+    if (validationMessage) {
+      set({ validationMessage });
+      return;
+    }
+
+    commitProject(set, get, { ...project, objects });
+    set({ validationMessage: null });
   },
   moveFurniture: (objectId, origin) => {
     const project = get().project;
@@ -758,8 +797,36 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const { project, activeFloorPlanId, stageSize } = get();
     set({ viewport: fitViewport(project, activeFloorPlanId, stageSize) });
   },
+  saveStartView: () => {
+    const { project, activeFloorPlanId, viewport, stageSize } = get();
+    const plan = getFloorPlan(project, activeFloorPlanId);
+    if (!project || !plan) return;
+
+    const startView = {
+      x: -viewport.x / viewport.scale,
+      y: -viewport.y / viewport.scale,
+      width: stageSize.width / viewport.scale,
+      height: stageSize.height / viewport.scale,
+    };
+    commitProject(set, get, { ...project, floorPlans: project.floorPlans.map((item) => (item.id === plan.id ? { ...item, startView } : item)) });
+  },
+  clearStartView: () => {
+    const { project, activeFloorPlanId, stageSize } = get();
+    const plan = getFloorPlan(project, activeFloorPlanId);
+    if (!project || !plan?.startView) return;
+
+    const next = { ...project, floorPlans: project.floorPlans.map((item) => (item.id === plan.id ? { ...item, startView: undefined } : item)) };
+    commitProject(set, get, next);
+    set({ viewport: fitViewport(next, plan.id, stageSize) });
+  },
   setViewport: (viewport) => set((state) => ({ viewport: { ...state.viewport, ...viewport } })),
-  setStageSize: (size) => set({ stageSize: size }),
+  setStageSize: (size) =>
+    set((state) => {
+      // Первый замер холста — только теперь известно, во что вписывать план.
+      // До него вид стоял на заготовке, и план открывался как попало.
+      const firstMeasure = state.stageSize === defaultStageSize;
+      return firstMeasure ? { stageSize: size, viewport: fitViewport(state.project, state.activeFloorPlanId, size) } : { stageSize: size };
+    }),
   undo: () => {
     const { historyPast, historyFuture, project, draftPoints } = get();
 
@@ -857,6 +924,17 @@ function fitViewport(project: ExhibitionProject | null, floorPlanId: string | nu
 
   // Площадку стенда показываем с запасом: в портале фрейм невысокий, и план
   // впритык упирается в края — некуда вытащить предмет и не видно габаритов.
+  // Запомненный вид вписываем без полей: его и выбирали по краям экрана.
+  const view = plan.startView;
+  if (view && view.width > 0 && view.height > 0) {
+    const scale = Math.min(Math.max(Math.min(stageSize.width / view.width, stageSize.height / view.height), minScale), maxScale);
+    return {
+      scale,
+      x: stageSize.width / 2 - (view.x + view.width / 2) * scale,
+      y: stageSize.height / 2 - (view.y + view.height / 2) * scale,
+    };
+  }
+
   const zoom = getFloorPlanKind(plan) === "stand" ? standFitZoom : 1;
   const exact = Math.min(available.width / plan.width, available.height / plan.height) * zoom;
   const scale = Math.min(Math.max(exact, minScale), maxScale);

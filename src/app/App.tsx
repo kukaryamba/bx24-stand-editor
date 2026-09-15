@@ -75,6 +75,8 @@ export function App() {
   const zoomIn = useEditorStore((state) => state.zoomIn);
   const zoomOut = useEditorStore((state) => state.zoomOut);
   const fitToScreen = useEditorStore((state) => state.fitToScreen);
+  const saveStartView = useEditorStore((state) => state.saveStartView);
+  const clearStartView = useEditorStore((state) => state.clearStartView);
   const updateFloorPlanGrid = useEditorStore((state) => state.updateFloorPlanGrid);
   const showFloorPlanKind = useEditorStore((state) => state.showFloorPlanKind);
   const resizeStandPlan = useEditorStore((state) => state.resizeStandPlan);
@@ -453,6 +455,21 @@ export function App() {
 
         {activePlan && screen === "expo" ? (
           <div className="panel-section grid-settings">
+            <h2>Вид при открытии</h2>
+            <button type="button" className="primary-action" onClick={saveStartView}>
+              Открывать план так, как сейчас на экране
+            </button>
+            {activePlan.startView ? (
+              <button type="button" onClick={clearStartView}>
+                Сбросить — показывать план целиком
+              </button>
+            ) : null}
+            <p>
+              {activePlan.startView
+                ? "Вид запомнен для всех. Кнопка Fit возвращает к нему."
+                : "Приблизьте и сдвиньте карту, как удобно, и нажмите кнопку — так карта будет открываться у всех."}
+            </p>
+
             <label className="checkbox-row">
               <input type="checkbox" checked={autoCrop} onChange={(event) => setAutoCrop(event.target.checked)} />
               Обрезать план по сетке при загрузке
