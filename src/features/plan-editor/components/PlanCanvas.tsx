@@ -608,6 +608,7 @@ function FurnitureShape({ object, selected, onSelect, onDragStart, onDragMove, o
   // Konva вращает вокруг левого верхнего угла, поэтому картинку возвращаем в рамку сдвигом.
   const shift = imageShift(meta.rotation, width, height);
   const look = plainWallIds.has(meta.itemId) ? "wall" : meta.itemId === "dver-razdvizhnaya" ? "sliding-door" : "picture";
+  const frameless = framelessIds.has(meta.itemId);
 
   if (look !== "picture") {
     // Стены и раздвижная дверь — условные обозначения, как на строительном плане:
@@ -652,11 +653,12 @@ function FurnitureShape({ object, selected, onSelect, onDragStart, onDragMove, o
       onDragMove={onDragMove}
       onDragEnd={onDragEnd}
     >
+      {/* Условные значки (вешалка, корзина) — без белой рамки: рамка появляется только у выделенного. */}
       <Rect
         width={boxWidth}
         height={boxHeight}
-        fill={selected ? "#e8f0fe" : "#ffffff"}
-        stroke={selected ? "#0b57d0" : "#5b6674"}
+        fill={frameless ? "rgba(0,0,0,0.001)" : selected ? "#e8f0fe" : "#ffffff"}
+        stroke={selected ? "#0b57d0" : frameless ? undefined : "#5b6674"}
         strokeWidth={selected ? 2.5 : 1}
         cornerRadius={2}
       />
@@ -829,6 +831,9 @@ function FriezeLabel({
 
 /** Глухие стеновые панели — рисуются сплошной чёрной полосой. Стена с занавеской и стеклом — картинкой. */
 const plainWallIds = new Set(["wall_1", "wall_05", "stena-10", "stena-05"]);
+
+/** Предметы-значки, которые рисуются без белой рамки вокруг картинки. */
+const framelessIds = new Set(["veshalka-nastennaya", "korzina"]);
 
 /** Слой рисования предмета: 0 — стены и полосы, 1 — мебель, 2 — свет. */
 function drawLayer(object: CanvasObject): number {
