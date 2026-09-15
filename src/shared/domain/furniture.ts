@@ -104,7 +104,8 @@ export function getFurnitureItem(id: string): FurnitureItem | undefined {
 
 export function getFurnitureImageUrl(item: FurnitureItem): string {
   const folder = item.source === "price2026" ? "furniture-2026" : "furniture";
-  return `${import.meta.env.BASE_URL}${folder}/${item.image}`;
+  // Метка сборки в адресе: иначе браузер годами показывает старый значок из кэша.
+  return `${import.meta.env.BASE_URL}${folder}/${item.image}?v=${__BUILD_STAMP__}`;
 }
 
 /** Для поиска: регистр, ё, «х» и «*» в размерах не должны мешать совпадению. */
