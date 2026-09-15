@@ -108,7 +108,6 @@ export function PropertiesPanel() {
   const deleteObjects = useEditorStore((state) => state.deleteObjects);
   const crm = useEditorStore((state) => state.crm);
   const validationMessage = useEditorStore((state) => state.validationMessage);
-  const isDirty = useEditorStore((state) => state.isDirty);
   const updateStand = useEditorStore((state) => state.updateStand);
   const deleteObject = useEditorStore((state) => state.deleteObject);
   const rotateFurniture = useEditorStore((state) => state.rotateFurniture);
@@ -127,11 +126,6 @@ export function PropertiesPanel() {
 
   return (
     <aside className="right-panel" aria-label="Панель свойств">
-      <div className="panel-heading">
-        <span>{isDirty ? "Есть несохранённые изменения" : "JSON синхронизирован"}</span>
-        <strong>{crm.provider === "bitrix24" ? "Bitrix24" : "Local"}</strong>
-      </div>
-
       {validationMessage ? <div className="validation-message">{validationMessage}</div> : null}
 
       {selectedObjectIds.length > 1 ? (

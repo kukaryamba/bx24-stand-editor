@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { loadPlanLibrary, savePlanLibrary, type SavedPlan } from "../../../shared/crm/planLibrary";
+import { loadHiddenBundledPlans, loadPlanLibrary, saveHiddenBundledPlans, savePlanLibrary, type SavedPlan } from "../../../shared/crm/planLibrary";
 import { bundledPlans, type BundledPlan } from "../../../shared/domain/bundledPlans";
 import type { FloorPlan } from "../../../shared/domain/types";
 import { useEditorStore } from "../store/editorStore";
@@ -25,6 +25,8 @@ export function PlanLibrary({ plan, onApplied }: Props) {
   const fitToScreen = useEditorStore((state) => state.fitToScreen);
 
   const [saved, setSaved] = useState<SavedPlan[]>([]);
+  /** Готовые планы, убранные из списка. */
+  const [hidden, setHidden] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   /** Какой план ждёт второго щелчка — для замены подложки или удаления из списка. */
@@ -36,9 +38,11 @@ export function PlanLibrary({ plan, onApplied }: Props) {
     if (!inPortal) return;
 
     let cancelled = false;
-    void loadPlanLibrary()
-      .then((plans) => {
-        if (!cancelled) setSaved(plans);
+    void Promise.all([loadPlanLibrary(), loadHiddenBundledPlans()])
+      .then(([plans, hiddenIds]) => {
+        if (cancelled) return;
+        setSaved(plans);
+        setHidden(hiddenIds);
       })
       .catch((error: unknown) => console.warn("Не удалось загрузить список планов.", error));
 
@@ -49,7 +53,8 @@ export function PlanLibrary({ plan, onApplied }: Props) {
 
   const imageUrl = plan.background?.imageUrl ?? "";
   const isLocalOnly = imageUrl.startsWith("data:");
-  const alreadyListed = [...bundledPlans, ...saved].some((item) => item.background.imageUrl === imageUrl);
+  const listed: BundledPlan[] = [...bundledPlans.filter((item) => !hidden.includes(item.id)), ...saved];
+  const alreadyListed = listed.some((item) => item.background.imageUrl === imageUrl);
 
   const saveBlocker = !inPortal
     ? "Сохранять в общий список можно только из портала: откройте приложение из карточки сделки."
@@ -108,17 +113,24 @@ export function PlanLibrary({ plan, onApplied }: Props) {
     }
   };
 
-  const remove = async (item: SavedPlan) => {
+  const remove = async (item: BundledPlan) => {
     if (!(armed?.id === item.id && armed.action === "remove")) {
       setArmed({ id: item.id, action: "remove" });
       return;
     }
 
     setArmed(null);
-    const next = saved.filter((entry) => entry.id !== item.id);
     try {
-      await savePlanLibrary(next);
-      setSaved(next);
+      if (saved.some((entry) => entry.id === item.id)) {
+        const next = saved.filter((entry) => entry.id !== item.id);
+        await savePlanLibrary(next);
+        setSaved(next);
+      } else {
+        // Готовый план зашит в приложение — его не удалить, только скрыть у всех.
+        const next = [...hidden, item.id];
+        await saveHiddenBundledPlans(next);
+        setHidden(next);
+      }
       setStatus(`«${item.title}» убран из списка. Подложка на карте осталась прежней.`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Не удалось убрать план из списка.");
@@ -129,11 +141,12 @@ export function PlanLibrary({ plan, onApplied }: Props) {
     <>
       <h2>Планы выставок</h2>
       <div className="stand-templates">
-        {[...bundledPlans, ...saved].map((item) => {
+        {listed.map((item) => {
           const current = imageUrl === item.background.imageUrl;
           const confirmApply = armed?.id === item.id && armed.action === "apply";
           const confirmRemove = armed?.id === item.id && armed.action === "remove";
-          const removable = saved.some((entry) => entry.id === item.id);
+          // Список общий и хранится в портале — править его можно только оттуда.
+          const removable = inPortal;
 
           return (
             <div key={item.id} className="plan-library__row">
@@ -152,7 +165,7 @@ export function PlanLibrary({ plan, onApplied }: Props) {
                 <button
                   type="button"
                   className={confirmRemove ? "plan-library__remove is-danger" : "plan-library__remove"}
-                  onClick={() => void remove(item as SavedPlan)}
+                  onClick={() => void remove(item)}
                   onBlur={() => setArmed((value) => (value?.id === item.id && value.action === "remove" ? null : value))}
                   title="Убрать из списка"
                 >
