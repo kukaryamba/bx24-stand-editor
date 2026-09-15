@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { getFurnitureItem } from "../../../shared/domain/furniture";
+import { baseCarpetColor, buildBaseObjects } from "../../../shared/domain/standBase";
 import { buildTemplateWalls, rotateTemplate, standTemplates, templateVariants, type StandTemplateId } from "../../../shared/domain/standTemplates";
 import {
   createStandFloorPlan,
@@ -628,10 +629,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       depthM,
     );
 
+    // Новая площадка сразу с базовой комплектацией по площади — допы добавят руками.
+    // Если в сделке уже лежит план стенда, он при открытии заменит базу.
+    const base = buildBaseObjects(plan, `${plan.id}-stands`, createId);
+    const standMeta = getObjectStandMeta(stand);
+    const standWithCarpet: CanvasObject =
+      standMeta && !standMeta.passport?.carpetColor
+        ? { ...stand, meta: { ...stand.meta, stand: { ...standMeta, passport: { ...standMeta.passport, carpetColor: baseCarpetColor } } } }
+        : stand;
+
     commitProject(set, get, {
       ...project,
       floorPlans: [...project.floorPlans, plan],
       layers: [...project.layers, ...layers],
+      objects: [...project.objects.map((item) => (item.id === standObjectId ? standWithCarpet : item)), ...base],
     });
     set({
       activeFloorPlanId: plan.id,

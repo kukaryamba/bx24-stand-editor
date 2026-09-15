@@ -1,5 +1,6 @@
 import { passportSlots } from "../../../shared/crm/passportFields";
 import { friezeMaxChars, getCanvasObject, getObjectStandMeta } from "../../../shared/domain/project";
+import { baseCarpetColor } from "../../../shared/domain/standBase";
 import { useFriezeLabels } from "../hooks/useFriezeDefaultLabel";
 import { useEditorStore } from "../store/editorStore";
 
@@ -71,7 +72,7 @@ export function PassportForm({ standObjectId }: { standObjectId: string }) {
             ) : (
               <input
                 value={value}
-                placeholder={isFrieze ? frieze.fromDeal : undefined}
+                placeholder={isFrieze ? frieze.fromDeal : slot.id === "carpetColor" ? baseCarpetColor : undefined}
                 onChange={(event) => change(slot.id, event.target.value)}
               />
             )}

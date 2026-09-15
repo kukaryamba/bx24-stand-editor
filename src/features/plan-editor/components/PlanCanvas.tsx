@@ -324,7 +324,8 @@ export function PlanCanvas() {
         }}
       >
         <Layer listening={false}>
-          <Rect width={floorPlan.width} height={floorPlan.height} fill="#f8fafb" stroke="#c8ced6" strokeWidth={2} />
+          {/* Площадка стенда закрашена цветом ковра — синий у всех стендов «Стандарт». Бледно, чтобы предметы читались. */}
+          <Rect width={floorPlan.width} height={floorPlan.height} fill={floorPlan.kind === "stand" ? "#dfe8f7" : "#f8fafb"} stroke="#c8ced6" strokeWidth={2} />
           {visibleLayerIds.has(`${floorPlan.id}-background`) && backgroundImage ? (
             <Image image={backgroundImage} width={floorPlan.width} height={floorPlan.height} opacity={0.78} />
           ) : null}

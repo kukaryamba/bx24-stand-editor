@@ -7,6 +7,7 @@ import { buildSpecification, formatNumber } from "../../../shared/domain/specifi
 import { renderPlanToDataUrl } from "../exportPlanImage";
 import { useFriezeDefaultLabel } from "../hooks/useFriezeDefaultLabel";
 import { useStandHeading } from "../hooks/useStandHeading";
+import { baseCarpetColor } from "../../../shared/domain/standBase";
 import { useEditorStore } from "../store/editorStore";
 
 type Props = {
@@ -41,7 +42,8 @@ export function StandPassport({ onClose }: Props) {
   // Надпись на фризе та же, что на панелях: пустая анкета — из названия сделки.
   const friezeLabel = useFriezeDefaultLabel();
   const values = useMemo(
-    () => readPassportValues({ ...standMeta?.passport, friezeText: friezeLabel }),
+    // Ковёр синий у всех, пока в анкете не вписан другой.
+    () => readPassportValues({ ...standMeta?.passport, friezeText: friezeLabel, carpetColor: standMeta?.passport?.carpetColor || baseCarpetColor }),
     [standMeta, friezeLabel],
   );
   const [snapshot, setSnapshot] = useState<string | null>(null);
