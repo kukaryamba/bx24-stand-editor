@@ -146,11 +146,11 @@ export function StandPassport({ onClose }: Props) {
             <table className="passport__table">
               <thead>
                 <tr>
-                  <th className="passport__num">№</th>
-                  <th className="passport__num">CODE // АРТ.</th>
-                  <th>ITEM // НАИМЕНОВАНИЕ</th>
-                  <th>QUANTITY // КОЛИЧЕСТВО</th>
-                  <th>PICTURE // ОБОЗНАЧЕНИЕ</th>
+                  <th className="passport__col-num">№</th>
+                  <th className="passport__col-title">ITEM // НАИМЕНОВАНИЕ</th>
+                  <th className="passport__col-code">CODE // АРТ.</th>
+                  <th className="passport__col-qty">QUANTITY // КОЛ-ВО</th>
+                  <th className="passport__col-picture">PICTURE // ОБОЗНАЧЕНИЕ</th>
                 </tr>
               </thead>
               <tbody>
@@ -161,14 +161,14 @@ export function StandPassport({ onClose }: Props) {
                     const item = getFurnitureItem(row.itemId);
                     return (
                       <tr key={row.itemId}>
-                        <td className="passport__num">{index + 1}</td>
+                        <td className="passport__col-num">{index + 1}</td>
+                        <td className="passport__col-title">{row.title}</td>
                         {/* Артикула нет у части позиций прайса — ставим прочерк, а не выдумываем. */}
-                        <td className="passport__num">{row.catalogId || "—"}</td>
-                        <td>{row.title}</td>
-                        <td>
+                        <td className="passport__col-code">{row.catalogId || "—"}</td>
+                        <td className="passport__col-qty">
                           {row.quantity} {row.unit}
                         </td>
-                        <td>{item ? <img src={getFurnitureImageUrl(item)} alt="" /> : null}</td>
+                        <td className="passport__col-picture">{item ? <img src={getFurnitureImageUrl(item)} alt="" /> : null}</td>
                       </tr>
                     );
                   })}

@@ -919,15 +919,31 @@ p {
   table-layout: fixed;
 }
 
-/* Названия длинные, количество короткое, обозначению хватает узкой колонки. */
-.passport__table th:first-child,
-.passport__table td:first-child {
-  width: 58%;
+/*
+ * Ширина — по назначению колонки, а не по порядку: номер узкий, название
+ * широкое, артикул и количество короткие, обозначению хватает картинки.
+ * Раньше ширина шла от порядка, и вставленный первым номер получил 58%.
+ */
+.passport__table .passport__col-num {
+  width: 6%;
+  text-align: center;
 }
 
-.passport__table th:nth-child(2),
-.passport__table td:nth-child(2) {
-  width: 20%;
+.passport__table .passport__col-title {
+  width: 48%;
+}
+
+.passport__table .passport__col-code {
+  width: 12%;
+  white-space: nowrap;
+}
+
+.passport__table .passport__col-qty {
+  width: 16%;
+}
+
+.passport__table .passport__col-picture {
+  width: 18%;
 }
 
 .passport__table th,
@@ -1322,11 +1338,4 @@ p {
   border: 1px solid #cfd6df;
   background: #ffffff;
   color: #111827;
-}
-
-/* Номер строки в списке оборудования паспорта. */
-.passport__table .passport__num {
-  width: 1%;
-  text-align: center;
-  white-space: nowrap;
 }
