@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { printInNewTab } from "../printDocument";
+import { useEffect, useMemo, useState } from "react";
 import { getDealSummary, type DealSummary } from "../../../shared/crm/dealInfo";
 import { readPassportValues } from "../../../shared/crm/passportFields";
 import { getFurnitureImageUrl, getFurnitureItem } from "../../../shared/domain/furniture";
@@ -37,7 +36,6 @@ export function StandPassport({ onClose }: Props) {
   const standMeta = stand ? getObjectStandMeta(stand) : null;
   const size = plan ? getStandSizeMeters(plan) : { width: 0, depth: 0 };
   const heading = useStandHeading(plan);
-  const passportRef = useRef<HTMLDivElement | null>(null);
   const dealId = standMeta?.dealId ?? crm.dealId;
 
   const [deal, setDeal] = useState<DealSummary | null>(null);
@@ -81,7 +79,7 @@ export function StandPassport({ onClose }: Props) {
 
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Паспорт стенда" onClick={onClose}>
-      <div className="modal passport" ref={passportRef} onClick={(event) => event.stopPropagation()}>
+      <div className="modal passport" onClick={(event) => event.stopPropagation()}>
         <div className="modal__head">
           <h2>Паспорт стенда</h2>
           <button type="button" className="modal__close" onClick={onClose} aria-label="Закрыть">
@@ -202,14 +200,8 @@ export function StandPassport({ onClose }: Props) {
         </div>
 
         <div className="modal__actions">
-          <button
-            className="primary-action"
-            onClick={() => {
-              // Вкладку не дали открыть (блокировщик) — печатаем как раньше, из окна.
-              if (!passportRef.current || !printInNewTab(passportRef.current, heading)) window.print();
-            }}
-          >
-            Печать / сохранить в PDF
+          <button className="primary-action" onClick={() => window.print()}>
+            Печать
           </button>
           <button onClick={onClose}>Закрыть</button>
         </div>
