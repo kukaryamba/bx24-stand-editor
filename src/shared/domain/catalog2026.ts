@@ -31,11 +31,13 @@ export const priceCatalog2026: FurnitureItem[] = [
   { id: "polka-naklonnaya", catalogId: "", title: "Полка ЛДСП наклонная 1 x 0,3 м", category: "storage", widthM: 1, depthM: 0.3, image: "polka-naklonnaya.svg", source: "price2026" },
   { id: "polka-steklyannaya", catalogId: "", title: "Полка стеклянная 0,97 x 0,47 м", category: "storage", widthM: 0.97, depthM: 0.47, image: "polka-steklyannaya.svg", source: "price2026" },
   { id: "stoyka-r05", catalogId: "202a", title: "Стойка информационная R-0,5 м", category: "tables", widthM: 1, depthM: 0.5, image: "stoyka-r05.svg", source: "price2026" },
-  { id: "stoyka-r10", catalogId: "202", title: "Стойка информационная R-1 м", category: "tables", widthM: 1, depthM: 1, image: "stoyka-r10.svg", source: "price2026" },
+  { id: "stoyka-r10", catalogId: "202", title: "Стойка информационная закруглённая R-1 м, h=1 м", category: "tables", widthM: 1, depthM: 1, image: "stoyka-r10.svg", source: "price2026" },
   { id: "stoyka-1x05", catalogId: "203", title: "Стойка информационная с внутренней полкой 1 x 0,5 м, h=1 м", category: "tables", widthM: 1, depthM: 0.5, image: "stoyka-1x05.svg", source: "price2026" },
   // Добавлен вручную, мимо генератора каталога.
   { id: "stol-podium", catalogId: "205", title: "Стол-подиум 1 x 0,5 м, h=0,75 м", category: "tables", widthM: 1, depthM: 0.5, image: "stol-podium.svg", source: "price2026" },
   { id: "stoyka-uzkaya-polka", catalogId: "211", title: "Стойка с узкой верхней полкой 1 x 0,5 м", category: "tables", widthM: 1, depthM: 0.5, image: "stoyka-uzkaya-polka.svg", source: "price2026" },
+  // Добавлен вручную, мимо генератора каталога.
+  { id: "stellazh-metallicheskiy", catalogId: "222", title: "Стеллаж металлический 1 x 0,5 м, h=2,5 м, 3 полки", category: "storage", widthM: 1, depthM: 0.5, image: "stellazh-metallicheskiy.svg", source: "price2026" },
   { id: "stellazh-plastmassovyy", catalogId: "", title: "Стеллаж пластмассовый, 5 полок", category: "storage", widthM: 1, depthM: 0.4, image: "stellazh-plastmassovyy.svg", source: "price2026" },
   { id: "vitrina-nizkaya-05x05", catalogId: "214", title: "Витрина низкая 0,5 x 0,5 м", category: "storage", widthM: 0.5, depthM: 0.5, image: "vitrina-nizkaya-05x05.svg", source: "price2026" },
   { id: "vitrina-nizkaya-1x05", catalogId: "215", title: "Витрина низкая 1 x 0,5 м", category: "storage", widthM: 1, depthM: 0.5, image: "vitrina-nizkaya-1x05.svg", source: "price2026" },
