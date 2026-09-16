@@ -1348,11 +1348,27 @@ p {
   margin-bottom: 16px;
 }
 
-.panel-documents button {
+/*
+ * Светлые кнопки с синей рамкой: общий стиль .primary-action даёт синий фон,
+ * и синий текст на нём не читался. Текст в одну строку — иначе «Паспорт
+ * стенда» переносился и кнопки выходили разной высоты.
+ */
+.panel-documents button,
+.panel-documents button.primary-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border-color: #1a73e8;
+  min-height: 36px;
+  padding: 0 8px;
+  border: 1px solid #1a73e8;
+  background: #ffffff;
   color: #0b57d0;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.panel-documents button:hover {
+  background: #e8f0fe;
 }
