@@ -18,7 +18,16 @@ import { useCategoryAccess } from "../features/plan-editor/hooks/useCategoryAcce
 import { usePanelWidths } from "../features/plan-editor/hooks/usePanelWidths";
 import { useStandPlanSync } from "../features/plan-editor/hooks/useStandPlanSync";
 import { useEditorStore } from "../features/plan-editor/store/editorStore";
-import { defaultStandSizeM, findStandByDeal, formatMeters, getFloorPlan, getFloorPlanKind, getStandSizeMeters } from "../shared/domain/project";
+import {
+  defaultStandSizeM,
+  findStandByDeal,
+  formatMeters,
+  getFloorPlan,
+  getFloorPlanKind,
+  getStandAreaM2,
+  getStandOutline,
+  getStandSizeMeters,
+} from "../shared/domain/project";
 import { useStandHeading } from "../features/plan-editor/hooks/useStandHeading";
 import { cropImage, detectGridStep } from "../shared/geometry/detectGrid";
 import { uploadPlanImage } from "../shared/storage/planUpload";
@@ -409,7 +418,10 @@ export function App() {
               ))}
             </div>
 
-            <p>Площадь стенда: {(standSize.width * standSize.depth).toFixed(1).replace(".", ",")} м². Клетка сетки — 1 x 1 м.</p>
+            <p>
+              Площадь стенда: {formatMeters(getStandAreaM2(project, activePlan))} м²
+              {getStandOutline(project, activePlan) ? " — по контуру с карты, стенд не прямоугольный" : ""}. Клетка сетки — 1 x 1 м.
+            </p>
 
             <h2>Базовая комплектация</h2>
             <button type="button" className="primary-action" onClick={() => applyBaseKit()}>

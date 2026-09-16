@@ -1,5 +1,5 @@
 import { furnitureCategories, getFurnitureItem } from "./furniture";
-import { getFloorPlan, getFloorPlanObjects, getObjectFurnitureMeta, getStandSizeMeters } from "./project";
+import { getFloorPlan, getFloorPlanObjects, getObjectFurnitureMeta, getStandAreaM2 } from "./project";
 import type { ExhibitionProject, Specification, SpecificationGroup, SpecificationRow } from "./types";
 
 /**
@@ -70,8 +70,8 @@ export function buildSpecification(project: ExhibitionProject | null, floorPlanI
     }))
     .filter((group) => group.rows.length > 0);
 
-  const size = plan ? getStandSizeMeters(plan) : { width: 0, depth: 0 };
-  const areaM2 = round1(size.width * size.depth);
+  // По настоящему контуру: у изогнутого стенда площадь меньше габаритного прямоугольника.
+  const areaM2 = plan ? getStandAreaM2(project, plan) : 0;
 
   const pricedSums = rows.map((row) => row.sumRub).filter((value): value is number => value !== undefined);
   const totalRub = pricedSums.length === rows.length && rows.length > 0 ? pricedSums.reduce((sum, value) => sum + value, 0) : undefined;

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Konva from "konva";
 import { Circle, Group, Image, Layer, Line, Rect, Stage, Text } from "react-konva";
 import { getFurnitureImageUrl, getFurnitureItem } from "../../../shared/domain/furniture";
-import { getCanvasObject, getFloorPlan, getFloorPlanLayers, getFloorPlanObjects, getObjectFurnitureMeta, getObjectPoints, getObjectStandMeta, isWallObject, splitFriezeLabel, stripKindOf, friezeMaxChars, type StripKind } from "../../../shared/domain/project";
+import { getCanvasObject, getFloorPlan, getFloorPlanLayers, getStandOutline, getFloorPlanObjects, getObjectFurnitureMeta, getObjectPoints, getObjectStandMeta, isWallObject, splitFriezeLabel, stripKindOf, friezeMaxChars, type StripKind } from "../../../shared/domain/project";
 import { currentDealColor, statusColors } from "../../../shared/domain/status";
 import type { CanvasObject, Point } from "../../../shared/domain/types";
 import { flattenPoints, polygonArea, polygonCentroid, snapPoint } from "../../../shared/geometry/polygon";
@@ -63,6 +63,7 @@ export function PlanCanvas() {
   const selectedObject = useMemo(() => getCanvasObject(project, selectedObjectId), [project, selectedObjectId]);
   const planStand = floorPlan?.standObjectId ? getCanvasObject(project, floorPlan.standObjectId) : null;
   const standCarpet = planStand ? getObjectStandMeta(planStand)?.passport?.carpetColor : undefined;
+  const standOutline = useMemo(() => getStandOutline(project, floorPlan), [floorPlan, project]);
   const backgroundImage = useImage(floorPlan?.background?.imageUrl ?? "");
 
   useEffect(() => {
@@ -411,14 +412,26 @@ export function PlanCanvas() {
         }}
       >
         <Layer listening={false}>
-          {/* Площадка стенда закрашена цветом ковра из анкеты, по умолчанию серым. */}
-          <Rect width={floorPlan.width} height={floorPlan.height} fill={floorPlan.kind === "stand" ? carpetFill(standCarpet) : "#f8fafb"} stroke="#c8ced6" strokeWidth={2} />
+          {/*
+            Площадка стенда закрашена цветом ковра из анкеты, по умолчанию серым.
+            У непрямоугольного стенда ковёр — только внутри контура с карты,
+            остальное светлое: это габарит, а не площадь стенда.
+          */}
+          <Rect
+            width={floorPlan.width}
+            height={floorPlan.height}
+            fill={floorPlan.kind === "stand" && !standOutline ? carpetFill(standCarpet) : "#f8fafb"}
+            stroke="#c8ced6"
+            strokeWidth={2}
+          />
+          {standOutline ? <Line points={flattenPoints(standOutline)} closed fill={carpetFill(standCarpet)} /> : null}
           {visibleLayerIds.has(`${floorPlan.id}-background`) && backgroundImage ? (
             <Image image={backgroundImage} width={floorPlan.width} height={floorPlan.height} opacity={0.78} />
           ) : null}
           {gridLines.map((line) => (
             <Line key={line.key} points={line.points} stroke={line.major ? "#aab3bf" : "#d8dde4"} strokeWidth={line.major ? 1 : 0.5} />
           ))}
+          {standOutline ? <Line points={flattenPoints(standOutline)} closed stroke="#253141" strokeWidth={2.5} lineJoin="round" /> : null}
         </Layer>
 
         {/*

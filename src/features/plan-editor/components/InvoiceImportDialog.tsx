@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { loadInvoiceMappings, saveInvoiceMappings, type InvoiceMappings } from "../../../shared/crm/invoiceMappings";
 import { priceCatalog2026 } from "../../../shared/domain/catalog2026";
 import { furnitureCategories, getFurnitureItem } from "../../../shared/domain/furniture";
-import { getCanvasObject, getFloorPlan, getObjectStandMeta, getStandSizeMeters } from "../../../shared/domain/project";
+import { getCanvasObject, getFloorPlan, getObjectStandMeta, getStandAreaM2 } from "../../../shared/domain/project";
 import { baseMaxAreaM2 } from "../../../shared/domain/standBase";
 import { normalizeRowText, parseInvoice, pieces, type InvoiceMatch, type ParsedInvoice } from "../../../shared/invoice/parseInvoice";
 import { readPdfLines } from "../../../shared/invoice/pdfText";
@@ -47,8 +47,7 @@ export function InvoiceImportDialog({ onClose }: { onClose: () => void }) {
   const plan = getFloorPlan(project, activeFloorPlanId);
   const stand = plan?.standObjectId ? getCanvasObject(project, plan.standObjectId) : null;
   const standNumber = stand ? getObjectStandMeta(stand)?.number : null;
-  const size = plan ? getStandSizeMeters(plan) : { width: 0, depth: 0 };
-  const planArea = Math.round(size.width * size.depth * 10) / 10;
+  const planArea = plan ? getStandAreaM2(project, plan) : 0;
 
   const [mappings, setMappings] = useState<InvoiceMappings>({});
   const [invoices, setInvoices] = useState<Array<{ fileName: string; parsed: ParsedInvoice }>>([]);

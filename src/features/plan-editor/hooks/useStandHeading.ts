@@ -1,5 +1,5 @@
 import { companyShortName, standNumberFromTitle, useDealTitle } from "../../../shared/crm/dealTitle";
-import { formatMeters, getCanvasObject, getObjectStandMeta, getStandSizeMeters } from "../../../shared/domain/project";
+import { formatMeters, getCanvasObject, getObjectStandMeta, getStandAreaM2 } from "../../../shared/domain/project";
 import type { FloorPlan } from "../../../shared/domain/types";
 import { useEditorStore } from "../store/editorStore";
 
@@ -20,9 +20,9 @@ export function useStandHeading(plan: FloorPlan | null): string {
 
   if (!plan) return "План стенда";
 
-  const size = getStandSizeMeters(plan);
+  const area = getStandAreaM2(project, plan);
   const number = standNumberFromTitle(title) ?? meta?.number;
   const name = [number ? `Стенд ${number}` : "Стенд", companyShortName(title)].filter(Boolean).join(" · ");
   // Площадь, а не габариты: стенды продают по метрам, «2 x 3 м» приходится пересчитывать в уме.
-  return `${name} — ${formatMeters(size.width * size.depth)} м²`;
+  return `${name} — ${formatMeters(area)} м²`;
 }

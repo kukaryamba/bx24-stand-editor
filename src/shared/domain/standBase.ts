@@ -81,11 +81,12 @@ const wall = 0.1;
 /** Зазор между предметами, метры. */
 const gap = 0.05;
 
-export function buildBaseObjects(plan: FloorPlan, layerId: string, createId: (prefix: string) => string): CanvasObject[] {
+/** areaM2 — настоящая площадь стенда, если он не прямоугольный: по ней выбирается колонка таблицы. */
+export function buildBaseObjects(plan: FloorPlan, layerId: string, createId: (prefix: string) => string, areaM2?: number): CanvasObject[] {
   const pxPerMeter = plan.grid.cellSizePx / plan.grid.metersPerCell;
   const W = plan.width / pxPerMeter;
   const D = plan.height / pxPerMeter;
-  const area = W * D;
+  const area = areaM2 ?? W * D;
   const qty = (itemId: string) => baseQuantity(itemId, area);
 
   const linear = standTemplates.find((template) => template.id === "linear");

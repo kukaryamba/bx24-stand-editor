@@ -16,6 +16,7 @@ import {
   getObjectFurnitureMeta,
   getObjectPoints,
   getObjectStandMeta,
+  getStandAreaM2,
   getStandPlans,
   getStandSizeMeters,
   standPlanTitle,
@@ -810,7 +811,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     // Новая площадка сразу с базовой комплектацией по площади — допы добавят руками.
     // Если в сделке уже лежит план стенда, он при открытии заменит базу.
     // Цвет ковра в анкету не вписываем: пустое поле и есть ковёр по умолчанию.
-    const base = buildBaseObjects(plan, `${plan.id}-stands`, createId);
+    const base = buildBaseObjects(plan, `${plan.id}-stands`, createId, getStandAreaM2(project, plan));
 
     commitProject(set, get, {
       ...project,
@@ -885,7 +886,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const plan = getFloorPlan(project, floorPlanId ?? state.activeFloorPlanId);
     if (!project || !plan || plan.kind !== "stand") return;
 
-    const base = buildBaseObjects(plan, getLayerId(project, plan.id, "stands"), createId);
+    const base = buildBaseObjects(plan, getLayerId(project, plan.id, "stands"), createId, getStandAreaM2(project, plan));
     const kept = project.objects.filter((object) => object.floorPlanId !== plan.id || object.kind !== "equipment");
 
     commitProject(set, get, { ...project, objects: [...kept, ...base] });

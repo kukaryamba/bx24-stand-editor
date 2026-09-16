@@ -194,6 +194,55 @@ export function getStandSizeMeters(plan: FloorPlan): { width: number; depth: num
   };
 }
 
+/**
+ * Настоящий контур стенда на его площадке, в пикселях площадки.
+ *
+ * Площадка строится прямоугольником по габаритам стенда, а сам стенд на карте
+ * бывает любой формы — Г-образный, с вырезом. Контур берётся с карты и
+ * растягивается на площадку, поэтому всегда совпадает с нарисованным.
+ * Для обычного прямоугольного стенда — null: контур и есть вся площадка.
+ */
+export function getStandOutline(project: ExhibitionProject | null, plan: FloorPlan | null): Point[] | null {
+  if (!project || !plan?.standObjectId) return null;
+  const stand = getCanvasObject(project, plan.standObjectId);
+  if (!stand || stand.kind !== "stand") return null;
+
+  const points = getObjectPoints(stand);
+  if (points.length < 3) return null;
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const width = Math.max(...xs) - minX;
+  const height = Math.max(...ys) - minY;
+  if (width <= 0 || height <= 0) return null;
+
+  const tolerance = Math.max(width, height) * 0.001;
+  const onCorner = (point: Point) =>
+    (Math.abs(point.x - minX) < tolerance || Math.abs(point.x - minX - width) < tolerance) &&
+    (Math.abs(point.y - minY) < tolerance || Math.abs(point.y - minY - height) < tolerance);
+  if (points.length === 4 && points.every(onCorner)) return null;
+
+  return points.map((point) => ({
+    x: ((point.x - minX) / width) * plan.width,
+    y: ((point.y - minY) / height) * plan.height,
+  }));
+}
+
+/** Площадь стенда, м²: по настоящему контуру, если стенд не прямоугольный. */
+export function getStandAreaM2(project: ExhibitionProject | null, plan: FloorPlan): number {
+  const size = getStandSizeMeters(plan);
+  const outline = getStandOutline(project, plan);
+  if (!outline) return round1(size.width * size.depth);
+
+  const pxPerMeter = plan.grid.cellSizePx / plan.grid.metersPerCell;
+  const doubled = outline.reduce((sum, point, index) => {
+    const next = outline[(index + 1) % outline.length];
+    return sum + point.x * next.y - next.x * point.y;
+  }, 0);
+  return round1(Math.abs(doubled) / 2 / (pxPerMeter * pxPerMeter));
+}
+
 export function formatMeters(value: number): string {
   return String(round1(value)).replace(".", ",");
 }
