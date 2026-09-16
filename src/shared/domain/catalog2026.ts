@@ -68,7 +68,7 @@ export const priceCatalog2026: FurnitureItem[] = [
   { id: "kuler", catalogId: "401", title: "Кулер с бутылью 19 л", category: "equipment", widthM: 0.5, depthM: 0.5, image: "kuler.svg", source: "price2026" },
   { id: "plazma-50", catalogId: "", title: "Плазменная панель 50\"", category: "equipment", widthM: 1.2, depthM: 0.2, image: "plazma-50.svg", source: "price2026" },
   { id: "shchit-pod-plazmu", catalogId: "", title: "Щит под плазменную панель", category: "equipment", widthM: 1, depthM: 0.1, image: "shchit-pod-plazmu.svg", source: "price2026" },
-  { id: "stoyka-pod-plazmu", catalogId: "", title: "Стойка напольная под панель", category: "equipment", widthM: 0.6, depthM: 0.6, image: "stoyka-pod-plazmu.svg", source: "price2026" },
+  { id: "stoyka-pod-plazmu", catalogId: "", title: "Стойка напольная под панель", category: "equipment", widthM: 0.6, depthM: 0.15, image: "stoyka-pod-plazmu.svg", source: "price2026" },
   { id: "elektroshchit", catalogId: "301", title: "Электрощит 16 А до 10 кВт", category: "power", widthM: 0.4, depthM: 0.3, image: "elektroshchit.svg", source: "price2026" },
   { id: "rozetki-1kvt", catalogId: "318", title: "Блок розеток 220 В, 1 кВт", category: "power", widthM: 0.2, depthM: 0.2, image: "rozetki-1kvt.svg", source: "price2026" },
   { id: "rozetki-25kvt", catalogId: "", title: "Блок розеток 220 В, 2,5 кВт", category: "power", widthM: 0.2, depthM: 0.2, image: "rozetki-25kvt.svg", source: "price2026" },
