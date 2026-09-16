@@ -246,8 +246,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     // Слой тоже перепривязываем: план в сделке мог быть сохранён с другой площадки
     // (сделку перевязали на другой стенд), и предметы со слоем чужой площадки
     // лежали на этой, но не рисовались — площадка выглядела пустой.
+    const plan = getFloorPlan(project, floorPlanId);
     const restored = objects.map((object) =>
-      floorPlanId ? { ...object, floorPlanId, layerId: getLayerId(project, floorPlanId, "stands") } : object,
+      withCatalogSize(floorPlanId ? { ...object, floorPlanId, layerId: getLayerId(project, floorPlanId, "stands") } : object, plan),
     );
 
     commitProject(set, get, { ...project, objects: [...untouched, ...restored] });
@@ -1079,6 +1080,25 @@ function fitViewport(project: ExhibitionProject | null, floorPlanId: string | nu
     x: (stageSize.width - plan.width * scale) / 2,
     y: (stageSize.height - plan.height * scale) / 2,
   };
+}
+
+/**
+ * Размер предмета — по каталогу. Габарит записан в каждом поставленном
+ * предмете, и после того как позицию в каталоге переделали (стойка под
+ * панель стала узкой), старые предметы рисовались новой картинкой,
+ * растянутой на прежний квадрат. Растягиваемые полосы — фриз, оклейка —
+ * и стены своей длины не трогаем: их длину задают на плане.
+ */
+function withCatalogSize(object: CanvasObject, plan: FloorPlan | null): CanvasObject {
+  const meta = getObjectFurnitureMeta(object);
+  const item = meta ? getFurnitureItem(meta.itemId) : undefined;
+  if (!plan || !item || item.frieze || item.film || item.category === "walls" || object.shape.kind !== "rectangle") return object;
+
+  const pxPerMeter = plan.grid.cellSizePx / plan.grid.metersPerCell;
+  const width = item.widthM * pxPerMeter;
+  const height = item.depthM * pxPerMeter;
+  if (Math.abs(object.shape.width - width) < 0.5 && Math.abs(object.shape.height - height) < 0.5) return object;
+  return { ...object, shape: { ...object.shape, width, height } };
 }
 
 /** Глухие стеновые панели — их ставит и заменяет схема стенда. */
