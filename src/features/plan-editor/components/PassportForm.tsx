@@ -25,7 +25,7 @@ function FriezeCount({ text, fromDeal }: { text: string; fromDeal: boolean }) {
       Знаков: {count} из {friezeLimit}
       {count > friezeLimit ? " — больше, чем помещается на панели" : ""}
       {fromDeal ? ". Название компании из сделки" : ""}
-      . Эта же надпись — на фризе стенда.
+      . Общая для панелей фриза, у которых нет своей надписи.
     </span>
   );
 }
@@ -41,7 +41,7 @@ export function PassportForm({ standObjectId }: { standObjectId: string }) {
   const answers = meta?.passport ?? {};
 
   const change = (slotId: string, value: string) => {
-    // Надпись на фризе общая с панелями на площадке — меняется вместе с ними.
+    // Надпись на фризе — общая для панелей без своей надписи.
     if (slotId === "friezeText") {
       setStandFriezeText(standObjectId, value);
       return;
@@ -79,6 +79,11 @@ export function PassportForm({ standObjectId }: { standObjectId: string }) {
             )}
 
             {isFrieze ? <FriezeCount text={value} fromDeal={frieze.passportText === undefined && Boolean(frieze.fromDeal)} /> : null}
+            {isFrieze && frieze.passportText !== undefined && frieze.fromDeal && frieze.passportText !== frieze.fromDeal ? (
+              <button type="button" onClick={() => setStandFriezeText(standObjectId, null)}>
+                Взять из сделки: {frieze.fromDeal}
+              </button>
+            ) : null}
           </label>
         );
       })}

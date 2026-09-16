@@ -112,7 +112,6 @@ export function PropertiesPanel({ documents }: { documents?: ReactNode }) {
   const rotateFurniture = useEditorStore((state) => state.rotateFurniture);
   const updateFrieze = useEditorStore((state) => state.updateFrieze);
   const openStandPlan = useEditorStore((state) => state.openStandPlan);
-  const setStandFriezeText = useEditorStore((state) => state.setStandFriezeText);
   const frieze = useFriezeLabels();
   const plan = useMemo(() => getFloorPlan(project, activeFloorPlanId), [activeFloorPlanId, project]);
   const object = useMemo(() => getCanvasObject(project, selectedObjectId), [project, selectedObjectId]);
@@ -147,14 +146,15 @@ export function PropertiesPanel({ documents }: { documents?: ReactNode }) {
           {(furnitureItem.frieze || furnitureItem.film) && object.shape.kind === "rectangle" ? (
             <>
               {furnitureItem.frieze && frieze.standObjectId ? (
-                // На площадке стенда надпись общая с анкетой паспорта: правка здесь меняет её там и на всех панелях.
+                // На площадке стенда у каждой панели может быть своя надпись. Пока своей нет —
+                // общая надпись стенда: название компании или текст из анкеты паспорта.
                 <label>
-                  Надпись
+                  Надпись на этой панели
                   {/* В поле сам текст, а не бледная подсказка: название компании правят, а не набирают заново. */}
                   <input
                     value={furniture.label ?? frieze.label}
                     placeholder="ФРИЗ"
-                    onChange={(event) => setStandFriezeText(frieze.standObjectId!, event.target.value)}
+                    onChange={(event) => updateFrieze(object.id, { label: event.target.value })}
                   />
                 </label>
               ) : (
@@ -163,7 +163,7 @@ export function PropertiesPanel({ documents }: { documents?: ReactNode }) {
                   <input
                     value={furniture.label ?? ""}
                     placeholder={furnitureItem.film ? "ОКЛЕЙКА" : frieze.label || "ФРИЗ"}
-                    onChange={(event) => updateFrieze(object.id, { label: event.target.value })}
+                    onChange={(event) => updateFrieze(object.id, { label: event.target.value || null })}
                   />
                 </label>
               )}
@@ -171,16 +171,19 @@ export function PropertiesPanel({ documents }: { documents?: ReactNode }) {
                 <>
                   <FriezeLabelHint label={furniture.label ?? frieze.label} />
                   {frieze.standObjectId ? (
-                    <>
+                    furniture.label === undefined ? (
                       <p className="stand-hint">
-                        {frieze.passportText === undefined ? "Название компании из сделки. " : ""}Та же надпись — в анкете паспорта внизу панели.
+                        Общая надпись стенда{frieze.passportText === undefined ? " — название компании из сделки" : ""}. Её же меняет анкета
+                        паспорта внизу панели. Впишите здесь другое — и у этой панели будет своя.
                       </p>
-                      {frieze.passportText !== undefined && frieze.fromDeal && frieze.passportText !== frieze.fromDeal ? (
-                        <button type="button" onClick={() => setStandFriezeText(frieze.standObjectId!, null)}>
-                          Взять из сделки: {frieze.fromDeal}
+                    ) : (
+                      <>
+                        <p className="stand-hint">У этой панели своя надпись.</p>
+                        <button type="button" onClick={() => updateFrieze(object.id, { label: null })}>
+                          Как у стенда: {frieze.label || "ФРИЗ"}
                         </button>
-                      ) : null}
-                    </>
+                      </>
+                    )
                   ) : null}
                 </>
               ) : (

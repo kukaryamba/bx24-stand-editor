@@ -28,6 +28,7 @@ import type {
   ExhibitionProject,
   FloorPlan,
   FloorPlanKind,
+  FurnitureObjectMeta,
   LayerKind,
   Point,
   StandStatus,
@@ -132,7 +133,8 @@ type EditorState = {
    * Меняет надпись и длину фризовой панели. Длина — в пикселях плана,
    * вдоль панели; при повороте она остаётся длиной, а не шириной рамки.
    */
-  updateFrieze: (objectId: string, patch: { label?: string; lengthPx?: number }) => void;
+  /** label: null — у панели нет своей надписи, берётся общая надпись стенда. Пустая строка — своя, пустая. */
+  updateFrieze: (objectId: string, patch: { label?: string | null; lengthPx?: number }) => void;
   /**
    * Надпись на фризе стенда — одна на стенд: и в анкете паспорта, и на панелях.
    * Панели стенда сбрасывают свои прежние надписи, чтобы не расходиться
@@ -554,8 +556,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       shape: patch.lengthPx === undefined ? object.shape : { ...object.shape, width: Math.max(1, patch.lengthPx) },
       meta: {
         ...object.meta,
-        // Пустую надпись храним как «не задана»: тогда снова берётся из сделки.
-        furniture: patch.label === undefined ? meta : { ...meta, label: patch.label.trim() === "" ? undefined : patch.label },
+        furniture: patch.label === undefined ? meta : withLabel(meta, patch.label),
       },
     };
 
@@ -605,22 +606,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const standMeta = stand ? getObjectStandMeta(stand) : null;
     if (!project || !stand || !standMeta) return;
 
-    const standPlanIds = new Set(project.floorPlans.filter((plan) => plan.standObjectId === standObjectId).map((plan) => plan.id));
+    // null — вернуть надпись из сделки: убираем ответ из анкеты совсем.
+    // Панели со своей надписью не трогаем: у фризов стенда надписи бывают разные.
+    const { friezeText: _previous, ...rest } = standMeta.passport ?? {};
+    const passport = text === null ? rest : { ...rest, friezeText: text };
 
     commitProject(set, get, {
       ...project,
-      objects: project.objects.map((item) => {
-        if (item.id === standObjectId) {
-          // null — вернуть надпись из сделки: убираем ответ из анкеты совсем.
-          const { friezeText: _previous, ...rest } = standMeta.passport ?? {};
-          const passport = text === null ? rest : { ...rest, friezeText: text };
-          return { ...item, meta: { ...item.meta, stand: { ...standMeta, passport } } };
-        }
-
-        const furniture = getObjectFurnitureMeta(item);
-        if (!furniture?.label || !standPlanIds.has(item.floorPlanId) || !getFurnitureItem(furniture.itemId)?.frieze) return item;
-        return { ...item, meta: { ...item.meta, furniture: { ...furniture, label: undefined } } };
-      }),
+      objects: project.objects.map((item) =>
+        item.id === standObjectId ? { ...item, meta: { ...item.meta, stand: { ...standMeta, passport } } } : item,
+      ),
     });
   },
   rotateFurniture: (objectId) => {
@@ -991,6 +986,12 @@ function fitViewport(project: ExhibitionProject | null, floorPlanId: string | nu
     x: (stageSize.width - plan.width * scale) / 2,
     y: (stageSize.height - plan.height * scale) / 2,
   };
+}
+
+/** Своя надпись панели; null — своей нет, ключ убирается, чтобы не храниться пустым. */
+function withLabel(meta: FurnitureObjectMeta, label: string | null): FurnitureObjectMeta {
+  const { label: _previous, ...rest } = meta;
+  return label === null ? rest : { ...rest, label };
 }
 
 function commitProject(setState: EditorStateSetter, getState: () => EditorState, project: ExhibitionProject): void {

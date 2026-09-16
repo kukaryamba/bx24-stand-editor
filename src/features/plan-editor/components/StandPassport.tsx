@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getDealSummary, type DealSummary } from "../../../shared/crm/dealInfo";
 import { readPassportValues } from "../../../shared/crm/passportFields";
 import { getFurnitureImageUrl, getFurnitureItem } from "../../../shared/domain/furniture";
-import { getCanvasObject, getFloorPlan, getObjectStandMeta, getStandSizeMeters } from "../../../shared/domain/project";
+import { getCanvasObject, getFloorPlan, getObjectFurnitureMeta, getObjectStandMeta, getStandSizeMeters } from "../../../shared/domain/project";
 import { buildSpecification, formatNumber } from "../../../shared/domain/specification";
 import { renderPlanToDataUrl } from "../exportPlanImage";
 import { useFriezeDefaultLabel } from "../hooks/useFriezeDefaultLabel";
@@ -41,10 +41,26 @@ export function StandPassport({ onClose }: Props) {
   const [deal, setDeal] = useState<DealSummary | null>(null);
   // Надпись на фризе та же, что на панелях: пустая анкета — из названия сделки.
   const friezeLabel = useFriezeDefaultLabel();
+  // У панелей фриза надписи бывают разные — в паспорт все разные, через « / ».
+  const friezeLabels = useMemo(() => {
+    const labels = (project?.objects ?? [])
+      .filter((object) => object.floorPlanId === plan?.id)
+      .map((object) => getObjectFurnitureMeta(object))
+      .filter((meta) => meta && getFurnitureItem(meta.itemId)?.frieze)
+      .map((meta) => (meta?.label ?? friezeLabel).trim())
+      .filter(Boolean);
+    const distinct = [...new Set(labels)];
+    return distinct.length > 0 ? distinct : [friezeLabel];
+  }, [friezeLabel, plan?.id, project]);
   const values = useMemo(
-    // Ковёр синий у всех, пока в анкете не вписан другой.
-    () => readPassportValues({ ...standMeta?.passport, friezeText: friezeLabel, carpetColor: standMeta?.passport?.carpetColor || baseCarpetColor }),
-    [standMeta, friezeLabel],
+    // Ковёр серый у всех, пока в анкете не вписан другой.
+    () =>
+      readPassportValues({
+        ...standMeta?.passport,
+        friezeText: friezeLabels.join(" / "),
+        carpetColor: standMeta?.passport?.carpetColor || baseCarpetColor,
+      }),
+    [standMeta, friezeLabels],
   );
   const [snapshot, setSnapshot] = useState<string | null>(null);
 
@@ -124,7 +140,12 @@ export function StandPassport({ onClose }: Props) {
                   <dt>{item.slot.title}</dt>
                   <dd>
                     {item.value}
-                    {item.slot.id === "friezeText" ? <span className="passport__hint"> — знаков: {item.value.length}</span> : null}
+                    {item.slot.id === "friezeText" ? (
+                      <span className="passport__hint">
+                        {" — знаков: "}
+                        {friezeLabels.map((label) => Array.from(label).length).join(" / ")}
+                      </span>
+                    ) : null}
                   </dd>
                 </div>
               ))}
