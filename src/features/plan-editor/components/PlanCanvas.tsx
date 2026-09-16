@@ -748,9 +748,9 @@ function FriezeShape({ object, kind, selected, defaultLabel, lengthStepPx, onSel
   const { origin, width: length, height: depth } = object.shape;
   const shift = imageShift(meta.rotation, length, depth);
   const label = meta.label ?? defaultLabel;
-  // Перевёрнутая надпись не читается — у панели, развёрнутой на 180 и 270
-  // градусов, текст разворачиваем обратно.
-  const flipText = meta.rotation === 180 || meta.rotation === 270;
+  // Надпись поворачивается вместе с панелью на все четыре стороны: фриз
+  // смотрит надписью наружу, к проходу, и на плане это должно быть видно.
+  // Раньше при 180° и 270° надпись разворачивали обратно «для читаемости».
   // Ручка меньше толщины панели: крупная закрывала надпись и соседние стены.
   const handleRadius = Math.max(3, depth * 0.22);
 
@@ -774,7 +774,7 @@ function FriezeShape({ object, kind, selected, defaultLabel, lengthStepPx, onSel
           stroke={selected ? "#0b57d0" : style.stroke}
           strokeWidth={selected ? 2.5 : 1.5}
         />
-        <FriezeLabel label={label} length={length} depth={depth} flip={flipText} color={style.text} limit={style.limit} fontScale={style.fontScale} />
+        <FriezeLabel label={label} length={length} depth={depth} color={style.text} limit={style.limit} fontScale={style.fontScale} />
 
         {selected ? (
           <Circle
@@ -824,7 +824,6 @@ function FriezeLabel({
   label,
   length,
   depth,
-  flip,
   color,
   limit,
   fontScale,
@@ -832,7 +831,6 @@ function FriezeLabel({
   label: string;
   length: number;
   depth: number;
-  flip: boolean;
   color: string;
   /** Сколько знаков помещается; лишние красным. У оклейки ограничения нет. */
   limit: number | null;
@@ -852,8 +850,8 @@ function FriezeLabel({
   const total = fitsWidth + measure(extra, fontSize);
 
   return (
-    // Центр группы — центр панели: так надпись переворачивается на месте.
-    <Group x={length / 2} y={depth / 2} rotation={flip ? 180 : 0} listening={false}>
+    // Центр группы — центр панели: надпись стоит посередине и поворачивается с панелью.
+    <Group x={length / 2} y={depth / 2} listening={false}>
       <Text x={-total / 2} y={-fontSize / 2} text={fits} fontSize={fontSize} fontStyle="bold" fill={color} />
       {extra ? <Text x={-total / 2 + fitsWidth} y={-fontSize / 2} text={extra} fontSize={fontSize} fontStyle="bold" fill="#d93025" /> : null}
     </Group>
