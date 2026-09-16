@@ -17,6 +17,7 @@ import {
   getObjectPoints,
   getObjectStandMeta,
   getStandAreaM2,
+  getStandOutline,
   getStandPlans,
   getStandSizeMeters,
   standPlanTitle,
@@ -811,7 +812,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     // Новая площадка сразу с базовой комплектацией по площади — допы добавят руками.
     // Если в сделке уже лежит план стенда, он при открытии заменит базу.
     // Цвет ковра в анкету не вписываем: пустое поле и есть ковёр по умолчанию.
-    const base = buildBaseObjects(plan, `${plan.id}-stands`, createId, getStandAreaM2(project, plan));
+    const base = buildBaseObjects(plan, `${plan.id}-stands`, createId, getStandAreaM2(project, plan), getStandOutline(project, plan));
 
     commitProject(set, get, {
       ...project,
@@ -886,7 +887,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const plan = getFloorPlan(project, floorPlanId ?? state.activeFloorPlanId);
     if (!project || !plan || plan.kind !== "stand") return;
 
-    const base = buildBaseObjects(plan, getLayerId(project, plan.id, "stands"), createId, getStandAreaM2(project, plan));
+    const base = buildBaseObjects(plan, getLayerId(project, plan.id, "stands"), createId, getStandAreaM2(project, plan), getStandOutline(project, plan));
     const kept = project.objects.filter((object) => object.floorPlanId !== plan.id || object.kind !== "equipment");
 
     commitProject(set, get, { ...project, objects: [...kept, ...base] });
@@ -905,7 +906,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       !fresh && last && last.floorPlanId === plan.id && last.templateId === templateId ? (last.turns + 1) % templateVariants(template) : 0;
 
     const layerId = getLayerId(project, plan.id, "stands");
-    const walls = buildTemplateWalls(rotateTemplate(template, turns), plan, layerId, createId);
+    const walls = buildTemplateWalls(rotateTemplate(template, turns), plan, layerId, createId, getStandOutline(project, plan));
 
     // Заменяются только глухие стеновые панели. Фриз, оклейка, двери и стены
     // с занавеской лежат в том же разделе «Стены и двери», но их расставляли

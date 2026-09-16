@@ -1,6 +1,6 @@
-import { buildTemplateWalls, standTemplates } from "./standTemplates";
+import { buildTemplateWalls, planEdges, standTemplates } from "./standTemplates";
 import { getFurnitureItem } from "./furniture";
-import type { CanvasObject, FloorPlan } from "./types";
+import type { CanvasObject, FloorPlan, Point } from "./types";
 
 /**
  * Базовая комплектация стенда «Стандарт».
@@ -82,7 +82,14 @@ const wall = 0.1;
 const gap = 0.05;
 
 /** areaM2 — настоящая площадь стенда, если он не прямоугольный: по ней выбирается колонка таблицы. */
-export function buildBaseObjects(plan: FloorPlan, layerId: string, createId: (prefix: string) => string, areaM2?: number): CanvasObject[] {
+/** outline — контур непрямоугольного стенда: стены и фриз идут по его сторонам. */
+export function buildBaseObjects(
+  plan: FloorPlan,
+  layerId: string,
+  createId: (prefix: string) => string,
+  areaM2?: number,
+  outline?: Point[] | null,
+): CanvasObject[] {
   const pxPerMeter = plan.grid.cellSizePx / plan.grid.metersPerCell;
   const W = plan.width / pxPerMeter;
   const D = plan.height / pxPerMeter;
@@ -90,7 +97,7 @@ export function buildBaseObjects(plan: FloorPlan, layerId: string, createId: (pr
   const qty = (itemId: string) => baseQuantity(itemId, area);
 
   const linear = standTemplates.find((template) => template.id === "linear");
-  const objects: CanvasObject[] = linear ? buildTemplateWalls(linear, plan, layerId, createId) : [];
+  const objects: CanvasObject[] = linear ? buildTemplateWalls(linear, plan, layerId, createId, outline) : [];
 
   /** Кладёт предмет левым верхним углом в точку (метры). Повёрнутый на 90° лежит вдоль стены. */
   const put = (itemId: string, x: number, y: number, rotation = 0, lengthM?: number) => {
@@ -112,8 +119,12 @@ export function buildBaseObjects(plan: FloorPlan, layerId: string, createId: (pr
     });
   };
 
-  // Фриз — над открытой стороной, по всей ширине, вплотную к краю площадки.
-  put("friz-panel", 0, D - 0.3, 0, W);
+  // Фриз — над каждой открытой передней стороной, по её длине, вплотную к краю.
+  // У прямоугольного стенда передняя сторона одна — во всю ширину.
+  for (const edge of planEdges(plan, outline)) {
+    if (edge.side !== "front") continue;
+    put("friz-panel", edge.from / pxPerMeter, edge.at / pxPerMeter - 0.3, 0, (edge.to - edge.from) / pxPerMeter);
+  }
 
   // Комната переговоров — в правом заднем углу: перегородка в метре от задней
   // стены, от правой стены к центру. Дверь или занавеска ближе к центру.

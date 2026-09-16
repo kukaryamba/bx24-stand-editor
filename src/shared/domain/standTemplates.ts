@@ -1,4 +1,4 @@
-import type { CanvasObject, FloorPlan } from "./types";
+import type { CanvasObject, FloorPlan, Point } from "./types";
 
 /**
  * Типовые схемы выставочных стендов.
@@ -11,7 +11,7 @@ import type { CanvasObject, FloorPlan } from "./types";
 export type StandTemplateId = "linear" | "corner" | "peninsula" | "island";
 
 /** Стороны площадки, вдоль которых ставятся стены. */
-type Side = "back" | "left" | "right" | "front";
+export type Side = "back" | "left" | "right" | "front";
 
 export type StandTemplate = {
   id: StandTemplateId;
@@ -102,19 +102,77 @@ function splitSide(lengthM: number): Array<{ itemId: string; lengthM: number }> 
   return parts;
 }
 
+/** Прямая сторона площадки в пикселях: откуда, докуда и куда смотрит наружу. */
+export type PlanEdge = { side: Side; from: number; to: number; at: number };
+
+/**
+ * Стороны площадки. У прямоугольной — четыре. У стенда сложной формы —
+ * стороны его контура: каждая относится к той стороне света, куда смотрит
+ * наружу (вверх — задняя, вниз — передняя). Косые стороны пропускаются:
+ * прямыми панелями их не закрыть.
+ *
+ * from/to — отрезок вдоль стороны, at — её положение поперёк (y у
+ * горизонтальной, x у вертикальной).
+ */
+export function planEdges(plan: FloorPlan, outline?: Point[] | null): PlanEdge[] {
+  if (!outline || outline.length < 3) {
+    return [
+      { side: "back", from: 0, to: plan.width, at: 0 },
+      { side: "front", from: 0, to: plan.width, at: plan.height },
+      { side: "left", from: 0, to: plan.height, at: 0 },
+      { side: "right", from: 0, to: plan.height, at: plan.width },
+    ];
+  }
+
+  const edges: PlanEdge[] = [];
+  const tolerance = 0.5;
+  outline.forEach((a, index) => {
+    const b = outline[(index + 1) % outline.length];
+    const horizontal = Math.abs(a.y - b.y) < tolerance;
+    const vertical = Math.abs(a.x - b.x) < tolerance;
+    if (horizontal === vertical) return;
+
+    // Наружу — та сторона, где рядом с серединой стороны уже не стенд.
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    if (horizontal) {
+      const aboveInside = insidePolygon({ x: mid.x, y: mid.y - 1 }, outline);
+      edges.push({ side: aboveInside ? "front" : "back", from: Math.min(a.x, b.x), to: Math.max(a.x, b.x), at: a.y });
+    } else {
+      const leftInside = insidePolygon({ x: mid.x - 1, y: mid.y }, outline);
+      edges.push({ side: leftInside ? "right" : "left", from: Math.min(a.y, b.y), to: Math.max(a.y, b.y), at: a.x });
+    }
+  });
+  return edges;
+}
+
+function insidePolygon(point: Point, polygon: Point[]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i, i += 1) {
+    const current = polygon[i];
+    const previous = polygon[j];
+    const crosses =
+      current.y > point.y !== previous.y > point.y &&
+      point.x < ((previous.x - current.x) * (point.y - current.y)) / (previous.y - current.y) + current.x;
+    if (crosses) inside = !inside;
+  }
+  return inside;
+}
+
 /**
  * Строит объекты стен для выбранной схемы.
  * Возвращает готовые объекты холста — их остаётся положить в проект.
+ *
+ * outline — контур непрямоугольного стенда: тогда стены идут по его сторонам,
+ * а не по габаритному прямоугольнику площадки.
  */
 export function buildTemplateWalls(
   template: StandTemplate,
   plan: FloorPlan,
   layerId: string,
   createId: (prefix: string) => string,
+  outline?: Point[] | null,
 ): CanvasObject[] {
   const pxPerMeter = plan.grid.cellSizePx / plan.grid.metersPerCell;
-  const widthM = plan.width / pxPerMeter;
-  const depthM = plan.height / pxPerMeter;
   const objects: CanvasObject[] = [];
 
   const addWall = (itemId: string, xM: number, yM: number, rotation: number, lengthM: number) => {
@@ -134,18 +192,22 @@ export function buildTemplateWalls(
     });
   };
 
-  for (const side of template.walls) {
-    const horizontal = side === "back" || side === "front";
-    const parts = splitSide(horizontal ? widthM : depthM);
+  for (const edge of planEdges(plan, outline)) {
+    if (!template.walls.includes(edge.side)) continue;
+
+    const startM = edge.from / pxPerMeter;
+    const atM = edge.at / pxPerMeter;
     let offset = 0;
 
-    for (const part of parts) {
-      if (side === "back") addWall(part.itemId, offset, 0, 0, part.lengthM);
-      if (side === "front") addWall(part.itemId, offset, depthM - wallThicknessM, 0, part.lengthM);
-      // У повёрнутой панели ширина и глубина меняются местами, поэтому
-      // правая стена смещается на свою толщину внутрь площадки.
-      if (side === "left") addWall(part.itemId, 0, offset, 90, part.lengthM);
-      if (side === "right") addWall(part.itemId, widthM - wallThicknessM, offset, 90, part.lengthM);
+    for (const part of splitSide((edge.to - edge.from) / pxPerMeter)) {
+      const along = Math.round((startM + offset) * 100) / 100;
+      // Панель всегда внутри стенда: у задней и левой стороны — от линии внутрь,
+      // у передней и правой — на свою толщину от линии.
+      if (edge.side === "back") addWall(part.itemId, along, atM, 0, part.lengthM);
+      if (edge.side === "front") addWall(part.itemId, along, atM - wallThicknessM, 0, part.lengthM);
+      // У повёрнутой панели ширина и глубина меняются местами.
+      if (edge.side === "left") addWall(part.itemId, atM, along, 90, part.lengthM);
+      if (edge.side === "right") addWall(part.itemId, atM - wallThicknessM, along, 90, part.lengthM);
 
       offset = Math.round((offset + part.lengthM) * 10) / 10;
     }
