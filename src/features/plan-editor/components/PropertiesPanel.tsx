@@ -1,4 +1,4 @@
-import { ExternalLink, LayoutGrid, Trash2 } from "lucide-react";
+import { Copy, ExternalLink, LayoutGrid, Trash2 } from "lucide-react";
 import { dealUrl } from "../../../shared/crm/bitrixApi";
 import { useMemo, type ReactNode } from "react";
 import { getFurnitureItem } from "../../../shared/domain/furniture";
@@ -106,6 +106,7 @@ export function PropertiesPanel({ documents }: { documents?: ReactNode }) {
   const selectedObjectIds = useEditorStore((state) => state.selectedObjectIds);
   const deleteObjects = useEditorStore((state) => state.deleteObjects);
   const distributeObjects = useEditorStore((state) => state.distributeObjects);
+  const duplicateObjects = useEditorStore((state) => state.duplicateObjects);
   const crm = useEditorStore((state) => state.crm);
   const validationMessage = useEditorStore((state) => state.validationMessage);
   const updateStand = useEditorStore((state) => state.updateStand);
@@ -142,6 +143,11 @@ export function PropertiesPanel({ documents }: { documents?: ReactNode }) {
               <p className="stand-hint">Расставит выбранные предметы рядами равномерно по всей площадке. Отменить — Undo.</p>
             </>
           ) : null}
+
+          <button className="primary-action" onClick={() => duplicateObjects(selectedObjectIds)} title="Ctrl+D, или Ctrl+C и Ctrl+V">
+            <Copy size={16} aria-hidden />
+            Копировать выбранные
+          </button>
 
           <button className="danger-action" onClick={() => deleteObjects(selectedObjectIds)}>
             <Trash2 size={16} aria-hidden />
@@ -243,6 +249,11 @@ export function PropertiesPanel({ documents }: { documents?: ReactNode }) {
 
           <button className="primary-action" onClick={() => rotateFurniture(object.id)}>
             Повернуть на 90°
+          </button>
+
+          <button className="primary-action" onClick={() => duplicateObjects([object.id])} title="Ctrl+D, или Ctrl+C и Ctrl+V">
+            <Copy size={16} aria-hidden />
+            Копировать
           </button>
 
           <button className="danger-action" onClick={() => deleteObject(object.id)}>

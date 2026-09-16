@@ -26,6 +26,8 @@ export function PlanCanvas() {
   /** Тянули ли мышь: без этого одиночный клик сойдёт за пустую рамку. */
   const marqueeMoved = useRef(false);
   /** Выделенная группа, которую сейчас тянут: где стоял каждый узел в начале. */
+  /** Что скопировано Ctrl+C — вставляется Ctrl+V, сколько угодно раз. */
+  const clipboard = useRef<string[]>([]);
   const groupDrag = useRef<{ draggedId: string; starts: Map<string, { node: Konva.Node; x: number; y: number }> } | null>(null);
   // Размер холста живёт в store: по нему считается вписывание плана в экран.
   const stageSize = useEditorStore((state) => state.stageSize);
@@ -48,6 +50,7 @@ export function PlanCanvas() {
   const updateStand = useEditorStore((state) => state.updateStand);
   const moveFurniture = useEditorStore((state) => state.moveFurniture);
   const moveObjects = useEditorStore((state) => state.moveObjects);
+  const duplicateObjects = useEditorStore((state) => state.duplicateObjects);
   const rotateFurniture = useEditorStore((state) => state.rotateFurniture);
   const openStandPlan = useEditorStore((state) => state.openStandPlan);
   const setViewport = useEditorStore((state) => state.setViewport);
@@ -82,6 +85,22 @@ export function PlanCanvas() {
       // Отмена и повтор по-русски набираются другими буквами, поэтому смотрим
       // на физическую клавишу, а не на введённый символ.
       if (event.ctrlKey || event.metaKey) {
+        // Копия выделенного: Ctrl+D или Ctrl+C / Ctrl+V — как привыкли в редакторах.
+        if (event.code === "KeyC" && selectedObjectIds.length > 0) {
+          clipboard.current = [...selectedObjectIds];
+          return;
+        }
+        if (event.code === "KeyV" && clipboard.current.length > 0) {
+          event.preventDefault();
+          duplicateObjects(clipboard.current);
+          return;
+        }
+        if (event.code === "KeyD" && selectedObjectIds.length > 0) {
+          event.preventDefault();
+          duplicateObjects(selectedObjectIds);
+          return;
+        }
+
         const redo = event.code === "KeyY" || (event.code === "KeyZ" && event.shiftKey);
         const undo = event.code === "KeyZ" && !event.shiftKey;
         if (!redo && !undo) return;
@@ -122,7 +141,7 @@ export function PlanCanvas() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [deleteObjects, redoAction, rotateFurniture, selectedObjectId, selectedObjectIds, setViewport, undoAction, viewport.x, viewport.y]);
+  }, [deleteObjects, duplicateObjects, redoAction, rotateFurniture, selectedObjectId, selectedObjectIds, setViewport, undoAction, viewport.x, viewport.y]);
 
   useEffect(() => {
     if (!middleButtonPanning) return;

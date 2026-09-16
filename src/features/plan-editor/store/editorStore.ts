@@ -132,6 +132,11 @@ type EditorState = {
    * добавленные выделяются, чтобы их можно было сразу перетащить группой.
    */
   addFurnitureBatch: (itemIds: string[]) => void;
+  /**
+   * Копирует предметы открытой площадки: копии чуть сдвинуты, выделены
+   * и ложатся поверх. Стенды не копируются — у стенда своя сделка и площадка.
+   */
+  duplicateObjects: (objectIds: string[]) => void;
   /** Сдвигает несколько объектов разом на одно смещение — одним шагом истории. */
   moveObjects: (objectIds: string[], delta: Point) => void;
   rotateFurniture: (objectId: string) => void;
@@ -567,6 +572,28 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const ids = added.map((object) => object.id);
     set({ selectedObjectId: ids.length === 1 ? ids[0] : null, selectedObjectIds: ids, tool: "select", validationMessage: null });
   },
+  duplicateObjects: (objectIds) => {
+    const project = get().project;
+    if (!project) return;
+    const ids = new Set(objectIds);
+
+    const copies: CanvasObject[] = project.objects
+      .filter((object) => ids.has(object.id) && object.kind === "equipment" && object.shape.kind === "rectangle")
+      .map((object) => {
+        const plan = getFloorPlan(project, object.floorPlanId);
+        const offset = copyOffsetM * (plan ? plan.grid.cellSizePx / plan.grid.metersPerCell : 1);
+        const shape = object.shape.kind === "rectangle"
+          ? { ...object.shape, origin: { x: object.shape.origin.x + offset, y: object.shape.origin.y + offset } }
+          : object.shape;
+        return { ...object, id: createId("furniture"), shape, // Глубокая копия через JSON: structuredClone нет в старом браузере приложения Битрикс24.
+          meta: JSON.parse(JSON.stringify(object.meta)) as CanvasObject["meta"] };
+      });
+    if (copies.length === 0) return;
+
+    commitProject(set, get, { ...project, objects: [...project.objects, ...copies] });
+    const copyIds = copies.map((object) => object.id);
+    set({ selectedObjectId: copyIds.length === 1 ? copyIds[0] : null, selectedObjectIds: copyIds, tool: "select" });
+  },
   moveObjects: (objectIds, delta) => {
     const project = get().project;
     if (!project || (delta.x === 0 && delta.y === 0)) return;
@@ -879,12 +906,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const layerId = getLayerId(project, plan.id, "stands");
     const walls = buildTemplateWalls(rotateTemplate(template, turns), plan, layerId, createId);
 
-    // Прежние стены заменяются, остальная мебель остаётся на месте.
+    // Заменяются только глухие стеновые панели. Фриз, оклейка, двери и стены
+    // с занавеской лежат в том же разделе «Стены и двери», но их расставляли
+    // руками — раньше смена схемы стирала и их.
     const kept = project.objects.filter((object) => {
       if (object.floorPlanId !== plan.id) return true;
       const meta = getObjectFurnitureMeta(object);
-      if (!meta) return true;
-      return getFurnitureItem(meta.itemId)?.category !== "walls";
+      return !meta || !plainWallItemIds.has(meta.itemId);
     });
 
     commitProject(set, get, { ...project, objects: [...kept, ...walls] });
@@ -1050,6 +1078,12 @@ function fitViewport(project: ExhibitionProject | null, floorPlanId: string | nu
     y: (stageSize.height - plan.height * scale) / 2,
   };
 }
+
+/** Глухие стеновые панели — их ставит и заменяет схема стенда. */
+const plainWallItemIds = new Set(["wall_1", "wall_05", "stena-10", "stena-05"]);
+
+/** Смещение копии от оригинала, метры: чтобы копия была видна, а не легла точно поверх. */
+const copyOffsetM = 0.2;
 
 /** Своя надпись панели; null — своей нет, ключ убирается, чтобы не храниться пустым. */
 function withLabel(meta: FurnitureObjectMeta, label: string | null): FurnitureObjectMeta {
