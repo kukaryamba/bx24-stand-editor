@@ -22,7 +22,6 @@ import {
   withPolygonPoints,
 } from "../../../shared/domain/project";
 import type {
-  AppMode,
   CanvasObject,
   CrmContext,
   EditorTool,
@@ -71,7 +70,6 @@ type EditorState = {
   /** Всё выделенное: по нему работают групповые действия. */
   selectedObjectIds: string[];
   draftPoints: Point[];
-  mode: AppMode;
   tool: EditorTool;
   viewport: Viewport;
   stageSize: StageSize;
@@ -86,7 +84,6 @@ type EditorState = {
   createSnapshot: () => ExhibitionProject;
   saveWorkspace: () => void;
   setCrmContext: (crm: CrmContext) => void;
-  setMode: (mode: AppMode) => void;
   setTool: (tool: EditorTool) => void;
   selectObject: (objectId: string | null, additive?: boolean) => void;
   /** Выделяет сразу несколько — например, обведённых рамкой. */
@@ -187,7 +184,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   selectedObjectId: null,
   selectedObjectIds: [],
   draftPoints: [],
-  mode: "admin",
   tool: "select",
   viewport: defaultViewport,
   stageSize: defaultStageSize,
@@ -249,7 +245,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
   saveWorkspace: () => set({ isDirty: false }),
   setCrmContext: (crm) => set({ crm }),
-  setMode: (mode) => set({ mode, selectedObjectId: null, selectedObjectIds: [], draftPoints: [], tool: mode === "manager" ? "select" : get().tool }),
   setTool: (tool) => set({ tool, draftPoints: [], validationMessage: null }),
   /**
    * Обычный клик выбирает один объект, клик с Ctrl добавляет или убирает

@@ -34,7 +34,6 @@ export function PlanCanvas() {
   const activeFloorPlanId = useEditorStore((state) => state.activeFloorPlanId);
   const selectedObjectId = useEditorStore((state) => state.selectedObjectId);
   const draftPoints = useEditorStore((state) => state.draftPoints);
-  const mode = useEditorStore((state) => state.mode);
   const tool = useEditorStore((state) => state.tool);
   const viewport = useEditorStore((state) => state.viewport);
   const crm = useEditorStore((state) => state.crm);
@@ -418,7 +417,7 @@ export function PlanCanvas() {
               currentDeal={Boolean(crm.dealId && getObjectStandMeta(object)?.dealId === crm.dealId)}
               cellSizePx={floorPlan.grid.cellSizePx}
               metersPerCell={floorPlan.grid.metersPerCell}
-              draggable={mode === "admin"}
+              draggable
               onSelect={(additive) => selectObject(object.id, additive)}
               onOpen={() => openStandPlan(object.id)}
               onDragStart={(event) => handleDragStart(object, event)}
@@ -455,7 +454,7 @@ export function PlanCanvas() {
             ),
           )}
 
-          {selectedObject && selectedObject.kind === "stand" && mode === "admin"
+          {selectedObject && selectedObject.kind === "stand"
             ? getObjectPoints(selectedObject).map((point, index) => (
                 <Circle
                   key={`${selectedObject.id}-vertex-${index}`}

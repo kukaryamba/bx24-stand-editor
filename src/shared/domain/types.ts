@@ -1,4 +1,3 @@
-export type AppMode = "admin" | "manager";
 export type EditorTool = "select" | "polygon" | "pan";
 
 /** Общий план выставки или план отдельного стенда. */

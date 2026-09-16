@@ -66,14 +66,12 @@ export function App() {
   /** Что уже отправлено в портал — чтобы не слать одно и то же. */
   const portalSavedRef = useRef<string | null>(null);
   const backgroundUploadRef = useRef<HTMLInputElement | null>(null);
-  const mode = useEditorStore((state) => state.mode);
   const tool = useEditorStore((state) => state.tool);
   const loadProject = useEditorStore((state) => state.loadProject);
   const applyPortalProject = useEditorStore((state) => state.applyPortalProject);
   const setCrmContext = useEditorStore((state) => state.setCrmContext);
   const saveWorkspace = useEditorStore((state) => state.saveWorkspace);
   const setTool = useEditorStore((state) => state.setTool);
-  const setMode = useEditorStore((state) => state.setMode);
   const zoomIn = useEditorStore((state) => state.zoomIn);
   const zoomOut = useEditorStore((state) => state.zoomOut);
   const fitToScreen = useEditorStore((state) => state.fitToScreen);
@@ -338,15 +336,6 @@ export function App() {
           </button>
           <button className={screen === "stand" ? "is-active" : ""} onClick={() => openScreen("stand")}>
             План стенда
-          </button>
-        </div>
-
-        <div className="mode-switch" role="group" aria-label="Режим работы">
-          <button className={mode === "admin" ? "is-active" : ""} onClick={() => setMode("admin")}>
-            Администратор
-          </button>
-          <button className={mode === "manager" ? "is-active" : ""} onClick={() => setMode("manager")}>
-            Менеджер
           </button>
         </div>
 
