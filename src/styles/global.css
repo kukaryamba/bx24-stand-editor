@@ -1339,3 +1339,20 @@ p {
   background: #ffffff;
   color: #111827;
 }
+
+/* Спецификация и паспорт — вверху правой панели, в ряд. */
+.panel-documents {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.panel-documents button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-color: #1a73e8;
+  color: #0b57d0;
+}

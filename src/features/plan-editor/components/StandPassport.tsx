@@ -82,9 +82,15 @@ export function StandPassport({ onClose }: Props) {
       <div className="modal passport" onClick={(event) => event.stopPropagation()}>
         <div className="modal__head">
           <h2>Паспорт стенда</h2>
-          <button type="button" className="modal__close" onClick={onClose} aria-label="Закрыть">
-            ✕
-          </button>
+          {/* Печать и сверху: паспорт длинный, листать до конца ради кнопки неудобно. */}
+          <div className="modal__actions">
+            <button className="primary-action" onClick={() => window.print()}>
+              Печать
+            </button>
+            <button type="button" className="modal__close" onClick={onClose} aria-label="Закрыть">
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Сверху только название стенда — то же, что в заголовке редактора. */}

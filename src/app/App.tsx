@@ -539,19 +539,6 @@ export function App() {
         {screen === "stand" ? <StandNavigator /> : null}
         {screen === "stand" ? <FurniturePalette /> : null}
 
-        {screen === "stand" ? (
-          <div className="panel-section">
-            <button className="primary-action" onClick={() => setShowSpecification(true)}>
-              <FileText size={16} aria-hidden />
-              Спецификация
-            </button>
-            <button onClick={() => setShowPassport(true)}>
-              <FileText size={16} aria-hidden />
-              Паспорт стенда
-            </button>
-          </div>
-        ) : null}
-
         {screen === "stand" ? <DealSyncPanel error={standSyncError} /> : null}
       </aside>
 
@@ -579,7 +566,24 @@ export function App() {
         onDoubleClick={() => resetPanel("right")}
       />
 
-      <PropertiesPanel />
+      <PropertiesPanel
+        documents={
+          // Документы стенда — справа вверху: их открывают чаще всего, и искать
+          // внизу длинной левой панели неудобно.
+          screen === "stand" ? (
+            <div className="panel-documents">
+              <button className="primary-action" onClick={() => setShowSpecification(true)}>
+                <FileText size={16} aria-hidden />
+                Спецификация
+              </button>
+              <button className="primary-action" onClick={() => setShowPassport(true)}>
+                <FileText size={16} aria-hidden />
+                Паспорт стенда
+              </button>
+            </div>
+          ) : null
+        }
+      />
 
       {showSpecification ? <SpecificationDialog onClose={() => setShowSpecification(false)} /> : null}
       {showPassport ? <StandPassport onClose={() => setShowPassport(false)} /> : null}

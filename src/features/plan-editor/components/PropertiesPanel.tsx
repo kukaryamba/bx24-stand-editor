@@ -1,6 +1,6 @@
 import { ExternalLink, LayoutGrid, Trash2 } from "lucide-react";
 import { dealUrl } from "../../../shared/crm/bitrixApi";
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { getFurnitureItem } from "../../../shared/domain/furniture";
 import {
   friezeMaxChars,
@@ -99,7 +99,7 @@ function OpenDealButton({ dealId }: { dealId: string }) {
   );
 }
 
-export function PropertiesPanel() {
+export function PropertiesPanel({ documents }: { documents?: ReactNode }) {
   const project = useEditorStore((state) => state.project);
   const activeFloorPlanId = useEditorStore((state) => state.activeFloorPlanId);
   const selectedObjectId = useEditorStore((state) => state.selectedObjectId);
@@ -125,6 +125,7 @@ export function PropertiesPanel() {
 
   return (
     <aside className="right-panel" aria-label="Панель свойств">
+      {documents}
       {validationMessage ? <div className="validation-message">{validationMessage}</div> : null}
 
       {selectedObjectIds.length > 1 ? (
