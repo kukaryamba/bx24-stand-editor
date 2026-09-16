@@ -105,6 +105,7 @@ export function PropertiesPanel({ documents }: { documents?: ReactNode }) {
   const selectedObjectId = useEditorStore((state) => state.selectedObjectId);
   const selectedObjectIds = useEditorStore((state) => state.selectedObjectIds);
   const deleteObjects = useEditorStore((state) => state.deleteObjects);
+  const distributeObjects = useEditorStore((state) => state.distributeObjects);
   const crm = useEditorStore((state) => state.crm);
   const validationMessage = useEditorStore((state) => state.validationMessage);
   const updateStand = useEditorStore((state) => state.updateStand);
@@ -131,6 +132,16 @@ export function PropertiesPanel({ documents }: { documents?: ReactNode }) {
         <div className="property-form">
           <h2>Выбрано объектов: {selectedObjectIds.length}</h2>
           <p>Общих свойств у разных объектов нет, но удалить их можно разом — одной отменой всё вернётся.</p>
+
+          {plan?.kind === "stand" ? (
+            <>
+              <button className="primary-action" onClick={() => distributeObjects(selectedObjectIds)}>
+                <LayoutGrid size={16} aria-hidden />
+                Распределить по площадке
+              </button>
+              <p className="stand-hint">Расставит выбранные предметы рядами равномерно по всей площадке. Отменить — Undo.</p>
+            </>
+          ) : null}
 
           <button className="danger-action" onClick={() => deleteObjects(selectedObjectIds)}>
             <Trash2 size={16} aria-hidden />

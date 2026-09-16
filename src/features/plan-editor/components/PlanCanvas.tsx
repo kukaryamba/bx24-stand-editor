@@ -153,8 +153,8 @@ export function PlanCanvas() {
   // иначе он есть, считается и сохраняется, но на плане его не видно.
   const visibleObjects = objects.filter((object) => visibleLayerIds.has(object.layerId) || !knownLayerIds.has(object.layerId));
   const standObjects = visibleObjects.filter((object) => object.kind === "stand");
-  // Порядок рисования: стены, фриз и оклейка снизу, мебель над ними, свет на самом верху —
-  // споты крепят на стены и фриз, и они должны ложиться поверх, а не прятаться под панелью.
+  // Порядок рисования: свет всегда сверху — споты крепят на стены и фриз. Остальное —
+  // в порядке добавления: новый предмет ложится поверх старых, а не прячется под стеной.
   const furnitureObjects = visibleObjects
     .filter((object) => object.kind === "equipment")
     .map((object, index) => ({ object, index, layer: drawLayer(object) }))
@@ -834,12 +834,10 @@ const plainWallIds = new Set(["wall_1", "wall_05", "stena-10", "stena-05"]);
 /** Предметы-значки, которые рисуются без белой рамки вокруг картинки. */
 const framelessIds = new Set(["veshalka-nastennaya", "korzina", "plazma-50"]);
 
-/** Слой рисования предмета: 0 — стены и полосы, 1 — мебель, 2 — свет. */
+/** Слой рисования предмета: 1 — свет, поверх всего; 0 — остальное, в порядке добавления. */
 function drawLayer(object: CanvasObject): number {
   const meta = getObjectFurnitureMeta(object);
-  const category = meta ? getFurnitureItem(meta.itemId)?.category : undefined;
-  if (category === "lighting") return 2;
-  return category === "walls" ? 0 : 1;
+  return meta && getFurnitureItem(meta.itemId)?.category === "lighting" ? 1 : 0;
 }
 
 /**

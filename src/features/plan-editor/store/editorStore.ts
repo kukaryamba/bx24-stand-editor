@@ -118,7 +118,13 @@ type EditorState = {
     grid?: Partial<FloorPlan["grid"]>,
   ) => void;
   deleteObject: (objectId: string) => void;
-  addFurniture: (itemId: string, position: Point) => void;
+  /** count штук — плотным квадратом от точки, все выделены. */
+  addFurniture: (itemId: string, position: Point, count?: number) => void;
+  /**
+   * Расставляет выбранные предметы равномерно по площадке стенда: сетка
+   * по пропорциям площадки, каждый в центре своей клетки. Одним шагом истории.
+   */
+  distributeObjects: (objectIds: string[]) => void;
   moveFurniture: (objectId: string, origin: Point) => void;
   /**
    * Кладёт предметы (например, из счёта) рядом с площадкой, под её нижним краем,
@@ -431,7 +437,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
     set({ selectedObjectId: null, selectedObjectIds: [] });
   },
-  addFurniture: (itemId, position) => {
+  addFurniture: (itemId, position, count = 1) => {
     const state = get();
     const project = state.project;
     const floorPlan = getFloorPlan(project, state.activeFloorPlanId);
@@ -440,27 +446,84 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     // Габариты в метрах переводим в пиксели плана через масштаб сетки.
     const pxPerMeter = floorPlan.grid.cellSizePx / floorPlan.grid.metersPerCell;
-    const objectId = createId("furniture");
+    const width = item.widthM * pxPerMeter;
+    const height = item.depthM * pxPerMeter;
+    const gap = 0.1 * pxPerMeter;
 
-    const object: CanvasObject = {
-      id: objectId,
+    // Несколько штук — плотным квадратом от точки: дальше их расставляют
+    // «Распределить по площадке» или перетаскивают группой.
+    const safeCount = Math.max(1, Math.min(500, Math.round(count)));
+    const columns = Math.ceil(Math.sqrt(safeCount));
+    const added: CanvasObject[] = Array.from({ length: safeCount }, (_, index) => ({
+      id: createId("furniture"),
       floorPlanId: floorPlan.id,
       layerId: getLayerId(project, floorPlan.id, "stands"),
       kind: "equipment",
       name: item.title,
       shape: {
         kind: "rectangle",
-        origin: position,
-        width: item.widthM * pxPerMeter,
-        height: item.depthM * pxPerMeter,
+        origin: {
+          x: position.x + (index % columns) * (width + gap),
+          y: position.y + Math.floor(index / columns) * (height + gap),
+        },
+        width,
+        height,
       },
       meta: {
         furniture: { itemId: item.id, rotation: 0 },
       },
-    };
+    }));
 
-    commitProject(set, get, { ...project, objects: [...project.objects, object] });
-    set({ selectedObjectId: objectId, selectedObjectIds: [objectId], tool: "select" });
+    commitProject(set, get, { ...project, objects: [...project.objects, ...added] });
+    const ids = added.map((object) => object.id);
+    set({ selectedObjectId: ids.length === 1 ? ids[0] : null, selectedObjectIds: ids, tool: "select" });
+  },
+  distributeObjects: (objectIds) => {
+    const state = get();
+    const project = state.project;
+    const plan = getFloorPlan(project, state.activeFloorPlanId);
+    if (!project || !plan || plan.kind !== "stand") return;
+
+    const ids = new Set(objectIds);
+    const movable = project.objects.filter((object) => ids.has(object.id) && object.kind === "equipment" && object.shape.kind === "rectangle");
+    if (movable.length === 0) return;
+
+    const pxPerMeter = plan.grid.cellSizePx / plan.grid.metersPerCell;
+    // Отступ от края — толщина стены, чтобы предметы не ложились на панели.
+    const inset = 0.1 * pxPerMeter;
+    const areaWidth = Math.max(plan.width - inset * 2, 1);
+    const areaHeight = Math.max(plan.height - inset * 2, 1);
+
+    // Сетка по пропорциям площадки: на вытянутом стенде рядов меньше, мест в ряду больше.
+    const count = movable.length;
+    const columns = Math.max(1, Math.min(count, Math.round(Math.sqrt((count * areaWidth) / areaHeight))));
+    const rows = Math.ceil(count / columns);
+    const cellWidth = areaWidth / columns;
+    const cellHeight = areaHeight / rows;
+
+    const positions = new Map<string, Point>();
+    movable.forEach((object, index) => {
+      if (object.shape.kind !== "rectangle") return;
+      const rotation = getObjectFurnitureMeta(object)?.rotation ?? 0;
+      const turned = rotation === 90 || rotation === 270;
+      const boxWidth = turned ? object.shape.height : object.shape.width;
+      const boxHeight = turned ? object.shape.width : object.shape.height;
+      const column = index % columns;
+      const row = Math.floor(index / columns);
+      positions.set(object.id, {
+        x: inset + cellWidth * (column + 0.5) - boxWidth / 2,
+        y: inset + cellHeight * (row + 0.5) - boxHeight / 2,
+      });
+    });
+
+    commitProject(set, get, {
+      ...project,
+      objects: project.objects.map((object) => {
+        const origin = positions.get(object.id);
+        return origin && object.shape.kind === "rectangle" ? { ...object, shape: { ...object.shape, origin } } : object;
+      }),
+    });
+    set({ validationMessage: null });
   },
   addFurnitureBatch: (itemIds) => {
     const state = get();

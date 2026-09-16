@@ -15,8 +15,11 @@ export function FurniturePalette() {
   const [source, setSource] = useState<FurnitureSource>("price2026");
   const addFurniture = useEditorStore((state) => state.addFurniture);
   const viewport = useEditorStore((state) => state.viewport);
+  const stageSize = useEditorStore((state) => state.stageSize);
 
   const [query, setQuery] = useState("");
+  /** Сколько штук ставить за одно нажатие — пятьдесят стульев не кликают по одному. */
+  const [count, setCount] = useState(1);
   const searching = query.trim() !== "";
   // Пока ищут, разделы не мешают: ищем сразу во всех.
   const items = useMemo(
@@ -27,10 +30,10 @@ export function FurniturePalette() {
   const handleAdd = (itemId: string) => {
     // Центр текущего вида в координатах плана.
     const position = {
-      x: (-viewport.x + 420) / viewport.scale,
-      y: (-viewport.y + 320) / viewport.scale,
+      x: (-viewport.x + stageSize.width / 2) / viewport.scale,
+      y: (-viewport.y + stageSize.height / 2) / viewport.scale,
     };
-    addFurniture(itemId, position);
+    addFurniture(itemId, position, count);
   };
 
   return (
@@ -53,6 +56,17 @@ export function FurniturePalette() {
         placeholder="Поиск: артикул или название"
         onChange={(event) => setQuery(event.target.value)}
       />
+
+      <label className="furniture-palette__count">
+        Ставить за раз, шт.
+        <input
+          type="number"
+          min={1}
+          max={500}
+          value={count}
+          onChange={(event) => setCount(Math.max(1, Math.min(500, Math.round(Number(event.target.value)) || 1)))}
+        />
+      </label>
 
       <div className="furniture-palette__tabs" hidden={searching}>
         {furnitureCategories.map((category) => (
@@ -91,7 +105,7 @@ export function FurniturePalette() {
       </div>
 
       <p className="furniture-palette__hint">
-        Нажмите на предмет — он появится в центре плана. Дальше перетаскивайте мышью, поворот — клавишей R или кнопкой в панели справа.
+        Нажмите на предмет — он появится в центре плана (несколько штук — плотной группой, уже выделенной). Дальше перетаскивайте мышью, поворот — клавишей R или кнопкой в панели справа.
       </p>
     </div>
   );

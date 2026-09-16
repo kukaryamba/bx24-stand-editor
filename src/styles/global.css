@@ -1372,3 +1372,21 @@ p {
 .panel-documents button:hover {
   background: #e8f0fe;
 }
+
+/* Сколько штук ставить за одно нажатие в палитре. */
+.furniture-palette__count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.furniture-palette__count input {
+  width: 72px;
+  padding: 6px 8px;
+  border: 1px solid #cfd6df;
+  background: #ffffff;
+}
