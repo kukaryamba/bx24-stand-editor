@@ -7,7 +7,7 @@ import { buildSpecification, formatNumber } from "../../../shared/domain/specifi
 import { renderPlanToDataUrl } from "../exportPlanImage";
 import { useFriezeDefaultLabel } from "../hooks/useFriezeDefaultLabel";
 import { useStandHeading } from "../hooks/useStandHeading";
-import { baseCarpetColor } from "../../../shared/domain/standBase";
+import { baseCarpetColor, baseFriezeColor } from "../../../shared/domain/standBase";
 import { useEditorStore } from "../store/editorStore";
 
 type Props = {
@@ -59,6 +59,7 @@ export function StandPassport({ onClose }: Props) {
         ...standMeta?.passport,
         friezeText: friezeLabels.join(" / "),
         carpetColor: standMeta?.passport?.carpetColor || baseCarpetColor,
+        friezeColor: standMeta?.passport?.friezeColor || baseFriezeColor,
       }),
     [standMeta, friezeLabels],
   );

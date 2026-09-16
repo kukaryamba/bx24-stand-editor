@@ -9,7 +9,7 @@ import { flattenPoints, polygonArea, polygonCentroid, snapPoint } from "../../..
 import { maxScale, minScale, useEditorStore } from "../store/editorStore";
 import { useFriezeDefaultLabel } from "../hooks/useFriezeDefaultLabel";
 import { useStandCompanies } from "../hooks/useStandCompanies";
-import { carpetFill } from "../../../shared/domain/standBase";
+import { carpetFill, friezeTextFill } from "../../../shared/domain/standBase";
 import { useImage } from "../hooks/useImage";
 import { registerStage } from "../stageRegistry";
 
@@ -63,6 +63,8 @@ export function PlanCanvas() {
   const selectedObject = useMemo(() => getCanvasObject(project, selectedObjectId), [project, selectedObjectId]);
   const planStand = floorPlan?.standObjectId ? getCanvasObject(project, floorPlan.standObjectId) : null;
   const standCarpet = planStand ? getObjectStandMeta(planStand)?.passport?.carpetColor : undefined;
+  // Цвет надписи фриза — из анкеты, по умолчанию королевский синий 049. Только на площадке стенда.
+  const friezeTextColor = planStand ? friezeTextFill(getObjectStandMeta(planStand)?.passport?.friezeColor) : null;
   const standOutline = useMemo(() => getStandOutline(project, floorPlan), [floorPlan, project]);
   const backgroundImage = useImage(floorPlan?.background?.imageUrl ?? "");
 
@@ -466,6 +468,7 @@ export function PlanCanvas() {
                 kind={stripKindOf(object) ?? "frieze"}
                 selected={selectedObjectIds.includes(object.id)}
                 defaultLabel={stripKindOf(object) === "film" ? "ОКЛЕЙКА" : friezeDefaultLabel || "ФРИЗ"}
+                textColor={stripKindOf(object) === "frieze" ? friezeTextColor : null}
                 lengthStepPx={friezeStepPx}
                 onSelect={(additive) => selectObject(object.id, additive)}
                 onDragStart={(event) => handleDragStart(object, event)}
@@ -728,6 +731,8 @@ type FriezeShapeProps = {
   lengthStepPx: number;
   onSelect: (additive: boolean) => void;
   onResize: (lengthPx: number) => void;
+  /** Цвет надписи из анкеты; null — цвет по умолчанию для полосы. */
+  textColor: string | null;
 } & DragHandlers;
 
 /**
@@ -740,7 +745,7 @@ type FriezeShapeProps = {
  * Всё рисуется в группе, повёрнутой вместе с панелью, поэтому ручка длины
  * у повёрнутой панели сама оказывается на её конце.
  */
-function FriezeShape({ object, kind, selected, defaultLabel, lengthStepPx, onSelect, onDragStart, onDragMove, onDragEnd, onResize }: FriezeShapeProps) {
+function FriezeShape({ object, kind, selected, defaultLabel, lengthStepPx, textColor, onSelect, onDragStart, onDragMove, onDragEnd, onResize }: FriezeShapeProps) {
   const meta = getObjectFurnitureMeta(object);
   if (object.shape.kind !== "rectangle" || !meta) return null;
 
@@ -774,7 +779,7 @@ function FriezeShape({ object, kind, selected, defaultLabel, lengthStepPx, onSel
           stroke={selected ? "#0b57d0" : style.stroke}
           strokeWidth={selected ? 2.5 : 1.5}
         />
-        <FriezeLabel label={label} length={length} depth={depth} color={style.text} limit={style.limit} fontScale={style.fontScale} />
+        <FriezeLabel label={label} length={length} depth={depth} color={textColor ?? style.text} limit={style.limit} fontScale={style.fontScale} />
 
         {selected ? (
           <Circle

@@ -50,6 +50,19 @@ export function baseQuantity(itemId: string, areaM2: number): number {
   return baseTable[itemId]?.[baseColumn(areaM2)] ?? 0;
 }
 
+/** Цвет надписи на фризе по умолчанию у всех стендов — плёнка ORACAL 049. Меняется в анкете паспорта. */
+export const baseFriezeColor = "049 королевский синий";
+
+/**
+ * Цвет надписи фриза на плане по цвету из анкеты. Узнаём только королевский
+ * синий (049) — он у всех по умолчанию. Другой цвет словом на плане не
+ * изображаем: надпись тёмная, как раньше, а цвет виден в паспорте.
+ */
+export function friezeTextFill(color: string | undefined): string | null {
+  const name = (color || baseFriezeColor).trim().toLowerCase();
+  return /^0?49\b|королевск/.test(name) ? "#1f3f8f" : null;
+}
+
 /** Цвет ковра по умолчанию у всех стендов «Стандарт». Меняется в анкете паспорта. */
 export const baseCarpetColor = "Серый";
 
