@@ -148,6 +148,7 @@ const itemRules: Array<[RegExp, string | string[]]> = [
   [/прожектор.*кронштейн/, "prozhektor-mg-kronshteyn"],
   [/прожектор/, ["prozhektor-mg", "prozhektor-mg-kronshteyn", "prozhektor-led"]],
   [/электрощит|щит\s+электр/, "elektroshchit"],
+  [/розетк.*380|380\s*в.*розетк/, "rozetka-380"],
   [/розетк.*2[,.]5\s*квт/, "rozetki-25kvt"],
   [/розетк/, "rozetki-1kvt"],
 
