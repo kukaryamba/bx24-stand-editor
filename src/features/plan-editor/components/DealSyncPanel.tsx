@@ -104,7 +104,8 @@ export function DealSyncPanel({ error }: { error: string | null }) {
       <button type="button" onClick={() => fileInput.current?.click()}>
         Загрузить план из файла
       </button>
-      <input ref={fileInput} type="file" accept="application/json,.json" className="visually-hidden" onChange={(event) => { void readFile(event.target.files?.[0]); event.target.value = ""; }} />
+      {/* Без фильтра по типу: окно выбора в приложении Битрикс24 с фильтром не показывало .json. */}
+      <input ref={fileInput} type="file" className="visually-hidden" onChange={(event) => { void readFile(event.target.files?.[0]); event.target.value = ""; }} />
 
       {armed ? (
         <>

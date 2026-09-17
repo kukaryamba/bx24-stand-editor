@@ -126,7 +126,7 @@ export function BackupPanel() {
         <button type="button" disabled={busy} onClick={() => fileInput.current?.click()}>
           Восстановить из файла
         </button>
-        <input ref={fileInput} type="file" accept="application/json,.json" className="visually-hidden" onChange={(event) => void onFileChosen(event)} />
+        <input ref={fileInput} type="file" className="visually-hidden" onChange={(event) => void onFileChosen(event)} />
       </div>
       <p className="stand-hint">
         Скачанная копия включает и картинки планов — она выручит, даже если пропадёт хостинг. Делайте её перед каждой выставкой.
