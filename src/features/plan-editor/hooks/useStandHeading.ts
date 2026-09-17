@@ -16,7 +16,9 @@ export function useStandHeading(plan: FloorPlan | null, { fullCompany = false } 
 
   const stand = plan?.standObjectId ? getCanvasObject(project, plan.standObjectId) : null;
   const meta = stand ? getObjectStandMeta(stand) : null;
-  const title = useDealTitle(meta?.dealId ?? crm.dealId, crm.provider === "bitrix24");
+  // Название — только из сделки самого стенда: чужая сделка, из которой открыто
+  // приложение, подписывала бы стенд без сделки чужим именем.
+  const title = useDealTitle(stand ? (meta?.dealId ?? null) : crm.dealId, crm.provider === "bitrix24");
 
   if (!plan) return "План стенда";
 

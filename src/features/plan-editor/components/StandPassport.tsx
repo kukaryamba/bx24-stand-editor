@@ -36,7 +36,8 @@ export function StandPassport({ onClose }: Props) {
   const standMeta = stand ? getObjectStandMeta(stand) : null;
   const size = plan ? getStandSizeMeters(plan) : { width: 0, depth: 0 };
   const heading = useStandHeading(plan, { fullCompany: true });
-  const dealId = standMeta?.dealId ?? crm.dealId;
+  // Компания и контакт — только из сделки самого стенда.
+  const dealId = stand ? (standMeta?.dealId ?? null) : crm.dealId;
 
   const [deal, setDeal] = useState<DealSummary | null>(null);
   // Надпись на фризе та же, что на панелях: пустая анкета — из названия сделки.

@@ -107,9 +107,9 @@ export function App() {
   const historyFutureLength = useEditorStore((state) => state.historyFuture.length);
   const categoryAccess = useCategoryAccess(crm.provider === "bitrix24" && crm.placement === dealTabPlacement, crm.dealId);
   const activePlan = useMemo(() => getFloorPlan(project, activeFloorPlanId), [activeFloorPlanId, project]);
-  // Сделка открытой площадки: закреплённая за стендом, иначе та, из которой открыто приложение.
+  // Сделка открытой площадки — только закреплённая за стендом.
   const activeStand = activePlan?.standObjectId ? getCanvasObject(project, activePlan.standObjectId) : null;
-  const standDealId = (activeStand ? getObjectStandMeta(activeStand)?.dealId : null) ?? crm.dealId;
+  const standDealId = activeStand ? (getObjectStandMeta(activeStand)?.dealId ?? null) : null;
   // План стенда читается из сделки только после того, как пришла карта из портала.
   // Раньше чтение успевало пройти по копии из браузера, а карта из портала,
   // в которой предметов нет, приходила следом и стирала только что

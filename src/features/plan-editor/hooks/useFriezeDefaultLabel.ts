@@ -27,7 +27,8 @@ export function useFriezeLabels(): {
   const plan = getFloorPlan(project, activeFloorPlanId);
   const stand = plan?.standObjectId ? getCanvasObject(project, plan.standObjectId) : null;
   const standMeta = stand ? getObjectStandMeta(stand) : null;
-  const dealId = standMeta?.dealId ?? crm.dealId;
+  // На площадке стенда — только его сделка; на общем плане — сделка, из которой открыто.
+  const dealId = stand ? (standMeta?.dealId ?? null) : crm.dealId;
 
   const title = useDealTitle(dealId, crm.provider === "bitrix24");
   const fromDeal = companyName(title);

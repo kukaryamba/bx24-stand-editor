@@ -16,10 +16,10 @@ export function DealSyncPanel({ error }: { error: string | null }) {
   const activeStandObjectId = useEditorStore((s) => s.activeStandObjectId);
   const crm = useEditorStore((s) => s.crm);
 
-  // План сохраняется в сделку своего стенда. Сделка портала — запасной вариант:
-  // приложение может быть открыто из карточки, где стенд ещё не привязан.
+  // План сохраняется только в сделку своего стенда. Сделку, из которой открыто
+  // приложение, не подставляем: так план чужого стенда уезжал в неё.
   const stand = activeStandObjectId ? getCanvasObject(project, activeStandObjectId) : null;
-  const dealId = (stand ? getObjectStandMeta(stand)?.dealId : null) ?? crm.dealId;
+  const dealId = stand ? (getObjectStandMeta(stand)?.dealId ?? null) : crm.dealId;
   const insideBitrix = isBitrixEnvironment();
 
   return (
@@ -40,7 +40,10 @@ export function DealSyncPanel({ error }: { error: string | null }) {
       ) : null}
 
       {insideBitrix && !dealId ? (
-        <p className="deal-sync__hint">Стенд не привязан к сделке — план сохранять некуда. Привяжите сделку на общем плане.</p>
+        <p className="deal-sync__status is-error">
+          Стенд не привязан к сделке — план этой площадки хранится только в этом браузере, коллеги его не увидят. Привяжите
+          сделку на общем плане.
+        </p>
       ) : null}
 
       {!insideBitrix ? (

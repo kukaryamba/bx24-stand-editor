@@ -27,7 +27,10 @@ export function useStandPlanSync(plan: FloorPlan | null, enabled: boolean): stri
   const saved = useRef(new Map<string, string>());
 
   const stand = plan?.standObjectId ? getCanvasObject(project, plan.standObjectId) : null;
-  const dealId = (stand ? getObjectStandMeta(stand)?.dealId : null) ?? crm.dealId;
+  // Только сделка самого стенда. Раньше у стенда без сделки подставлялась
+  // сделка, из которой открыто приложение: площадка «Дирекции», открытая
+  // из сделки CIDCO, читала и писала план CIDCO — и затирала один другим.
+  const dealId = stand ? (getObjectStandMeta(stand)?.dealId ?? null) : null;
   const active = enabled && plan?.kind === "stand" && Boolean(dealId);
   const planId = plan?.id ?? null;
 
