@@ -31,9 +31,13 @@ type StoredPlan = {
  * килобайт — её вырезаем. А ссылка на план из состава приложения занимает
  * несколько десятков символов и сохраняется: по ней подложку увидят все.
  *
- * Предметы на стендах лежат в сделках, дублировать их здесь незачем.
+ * Предметы стенда со сделкой лежат в его сделке, дублировать их здесь незачем.
+ * А предметы, которым сделки нет, — на площадке стенда без сделки («Дирекция»)
+ * и на самом общем плане (фризы над проходами) — хранятся здесь. Раньше их
+ * выбрасывали, они жили только в браузере и терялись.
  */
 export function stripForPortal(project: ExhibitionProject): ExhibitionProject {
+  const ownPlans = portalOwnedPlanIds(project);
   return {
     ...project,
     floorPlans: project.floorPlans.map((plan) =>
@@ -41,8 +45,16 @@ export function stripForPortal(project: ExhibitionProject): ExhibitionProject {
         ? { ...plan, background: { ...plan.background, imageUrl: "" } }
         : plan,
     ),
-    objects: project.objects.filter((object) => object.kind !== "equipment"),
+    objects: project.objects.filter((object) => object.kind !== "equipment" || ownPlans.has(object.floorPlanId)),
   };
+}
+
+/** Планы, предметы которых хранятся в карте выставки: всё, кроме площадок стендов со сделкой. */
+export function portalOwnedPlanIds(project: ExhibitionProject): Set<string> {
+  const standDeals = new Map(
+    project.objects.filter((object) => object.kind === "stand").map((object) => [object.id, object.meta.stand?.dealId ?? null]),
+  );
+  return new Set(project.floorPlans.filter((plan) => !plan.standObjectId || !standDeals.get(plan.standObjectId)).map((plan) => plan.id));
 }
 
 export function portalPayloadSizeKb(project: ExhibitionProject): number {
@@ -81,7 +93,15 @@ export function mergeWithLocalBackgrounds(portal: ExhibitionProject, local: Exhi
   if (!local) return portal;
 
   const localPlans = new Map(local.floorPlans.map((plan) => [plan.id, plan]));
-  const equipment = local.objects.filter((object) => object.kind === "equipment");
+  // Предметы из браузера добавляем только туда, где портал своих не прислал:
+  // площадки со сделкой (их предметы придут из сделки) и планы, которые
+  // портал ещё не хранил, — иначе расстановка, жившая только в браузере,
+  // пропала бы при первом же открытии.
+  const portalIds = new Set(portal.objects.map((object) => object.id));
+  const plansWithPortalEquipment = new Set(portal.objects.filter((object) => object.kind === "equipment").map((object) => object.floorPlanId));
+  const equipment = local.objects.filter(
+    (object) => object.kind === "equipment" && !portalIds.has(object.id) && !plansWithPortalEquipment.has(object.floorPlanId),
+  );
 
   return {
     ...portal,
