@@ -433,7 +433,7 @@ export function PlanCanvas() {
           {gridLines.map((line) => (
             <Line key={line.key} points={line.points} stroke={line.major ? "#aab3bf" : "#d8dde4"} strokeWidth={line.major ? 1 : 0.5} />
           ))}
-          {standOutline ? <Line points={flattenPoints(standOutline)} closed stroke="#253141" strokeWidth={2.5} lineJoin="round" /> : null}
+          {/* Обводку контура не рисуем: границу показывают стены и заливка ковра, линия мешала их видеть. */}
         </Layer>
 
         {/*
