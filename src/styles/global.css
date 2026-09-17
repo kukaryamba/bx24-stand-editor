@@ -523,19 +523,38 @@ p {
   }
 
   /*
-   * План должен уместиться на первом листе, под шапкой, данными стенда
-   * и надписями фриза: A4 минус поля — около 273 мм, шапка с блоками —
-   * около 95 мм, остаётся ~16,5 см. При 11 см высокий стенд выходил узкой
-   * полоской, при 23,5 см — уезжал на второй лист.
+   * План всегда на первом листе. Первая страница — колонка ровно в высоту
+   * листа (A4 минус поля 12 мм — 273 мм, с запасом 266), план забирает всё,
+   * что осталось под шапкой, фризом и примечаниями, и вписывается туда.
+   * Фиксированная высота плана не годилась: то мелко, то уезжал на второй лист.
    */
   @page {
     size: A4;
     margin: 12mm;
   }
 
+  .passport__first-page {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 266mm;
+    overflow: hidden;
+    break-after: page;
+  }
+
+  .passport__plan-section {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
   .passport__plan {
+    flex: 1 1 auto;
     width: 100%;
-    max-height: 165mm;
+    height: 100%;
+    min-height: 0;
+    max-height: none;
     object-fit: contain;
   }
 }
@@ -1416,4 +1435,11 @@ p {
 /* Примечания в паспорте — с переносами строк, как вписали. */
 .passport__note {
   white-space: pre-line;
+}
+
+/* Первая страница паспорта на экране — как остальное окно: колонка с тем же отступом. */
+.passport__first-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }

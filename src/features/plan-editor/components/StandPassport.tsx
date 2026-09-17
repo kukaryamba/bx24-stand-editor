@@ -99,6 +99,12 @@ export function StandPassport({ onClose }: Props) {
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Паспорт стенда" onClick={onClose}>
       <div className="modal passport" onClick={(event) => event.stopPropagation()}>
+        {/*
+          Первая страница — отдельным блоком: при печати он ровно в высоту листа,
+          а план занимает всё, что осталось под шапкой, и ужимается под это место.
+          Так план всегда на первом листе, сколько бы ни было текста выше.
+        */}
+        <div className="passport__first-page">
         <div className="modal__head">
           <h2>Паспорт стенда</h2>
           {/* Печать и сверху: паспорт длинный, листать до конца ради кнопки неудобно. */}
@@ -165,11 +171,12 @@ export function StandPassport({ onClose }: Props) {
         ) : null}
 
         {snapshot ? (
-          <div className="passport__section">
+          <div className="passport__section passport__plan-section">
             <h3>PLAN // ПЛАН СТЕНДА</h3>
             <img className="passport__plan" src={snapshot} alt="План стенда" />
           </div>
         ) : null}
+        </div>
 
         <div className="passport__section">
           <h3>LIST OF EQUIPMENT // СПИСОК ОБОРУДОВАНИЯ</h3>
