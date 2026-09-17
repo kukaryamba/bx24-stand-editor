@@ -156,6 +156,14 @@ export function StandPassport({ onClose }: Props) {
           </div>
         ) : null}
 
+        {/* Примечания — перед планом, чтобы монтажники прочли их до того, как смотреть расстановку. Пустые не печатаем. */}
+        {standMeta?.note?.trim() ? (
+          <div className="passport__section">
+            <h3>COMMENTS // ПРИМЕЧАНИЯ</h3>
+            <p className="passport__note">{standMeta.note.trim()}</p>
+          </div>
+        ) : null}
+
         {snapshot ? (
           <div className="passport__section">
             <h3>PLAN // ПЛАН СТЕНДА</h3>
@@ -223,11 +231,6 @@ export function StandPassport({ onClose }: Props) {
             <p>Суммарная длина: {formatNumber(specification.filmLengthM)} м</p>
           </div>
         ) : null}
-
-        <div className="passport__section">
-          <h3>COMMENTS // ПРИМЕЧАНИЯ</h3>
-          <p>{standMeta?.note?.trim() ? standMeta.note : "—"}</p>
-        </div>
 
         <div className="modal__actions">
           <button className="primary-action" onClick={() => window.print()}>

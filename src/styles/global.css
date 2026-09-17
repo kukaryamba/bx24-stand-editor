@@ -1412,3 +1412,8 @@ p {
 .panel-documents__wide .stand-hint {
   margin: 0;
 }
+
+/* Примечания в паспорте — с переносами строк, как вписали. */
+.passport__note {
+  white-space: pre-line;
+}

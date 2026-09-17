@@ -90,6 +90,12 @@ export function PassportForm({ standObjectId }: { standObjectId: string }) {
         );
       })}
 
+      {/* Примечания — тот же комментарий, что у стенда на общем плане: раньше его можно было вписать только там. */}
+      <label>
+        Примечания
+        <textarea rows={4} value={meta.note} onChange={(event) => updateStand(standObjectId, { note: event.target.value })} />
+      </label>
+
       <p className="passport-form__hint">Заполненное попадает в паспорт стенда и видно всем, кто откроет эту сделку.</p>
     </div>
   );
