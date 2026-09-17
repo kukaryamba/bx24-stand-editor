@@ -35,7 +35,7 @@ export function StandPassport({ onClose }: Props) {
   const stand = plan?.standObjectId ? getCanvasObject(project, plan.standObjectId) : null;
   const standMeta = stand ? getObjectStandMeta(stand) : null;
   const size = plan ? getStandSizeMeters(plan) : { width: 0, depth: 0 };
-  const heading = useStandHeading(plan);
+  const heading = useStandHeading(plan, { fullCompany: true });
   const dealId = standMeta?.dealId ?? crm.dealId;
 
   const [deal, setDeal] = useState<DealSummary | null>(null);
@@ -71,7 +71,8 @@ export function StandPassport({ onClose }: Props) {
     if (!plan) return;
 
     try {
-      setSnapshot(renderPlanToDataUrl(plan, project?.objects ?? [], 2));
+      // Вчетверо плотнее экрана: снимок печатают крупно, и при двойной плотности значки мылились.
+      setSnapshot(renderPlanToDataUrl(plan, project?.objects ?? [], 4));
     } catch (error) {
       console.warn("Не удалось снять план стенда для паспорта.", error);
     }

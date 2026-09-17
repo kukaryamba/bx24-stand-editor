@@ -84,7 +84,7 @@ function StandNumberField({ standObjectId, number, dealId }: { standObjectId: st
  * она перекрыла бы редактор. Отдельная вкладка позволяет держать рядом и план,
  * и карточку клиента.
  */
-function OpenDealButton({ dealId }: { dealId: string }) {
+export function OpenDealButton({ dealId }: { dealId: string }) {
   const url = dealUrl(dealId);
 
   if (!url) {

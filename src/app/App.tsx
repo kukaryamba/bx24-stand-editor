@@ -6,7 +6,7 @@ import { InstallScreen } from "../features/plan-editor/components/InstallScreen"
 import { InvoiceImportDialog } from "../features/plan-editor/components/InvoiceImportDialog";
 import { PlanLibrary } from "../features/plan-editor/components/PlanLibrary";
 import { PlanCanvas } from "../features/plan-editor/components/PlanCanvas";
-import { PropertiesPanel } from "../features/plan-editor/components/PropertiesPanel";
+import { OpenDealButton, PropertiesPanel } from "../features/plan-editor/components/PropertiesPanel";
 import { SpecificationDialog } from "../features/plan-editor/components/SpecificationDialog";
 import { StandPassport } from "../features/plan-editor/components/StandPassport";
 import { StandNavigator } from "../features/plan-editor/components/StandNavigator";
@@ -22,8 +22,10 @@ import {
   defaultStandSizeM,
   findStandByDeal,
   formatMeters,
+  getCanvasObject,
   getFloorPlan,
   getFloorPlanKind,
+  getObjectStandMeta,
   getStandAreaM2,
   getStandOutline,
   getStandSizeMeters,
@@ -105,6 +107,9 @@ export function App() {
   const historyFutureLength = useEditorStore((state) => state.historyFuture.length);
   const categoryAccess = useCategoryAccess(crm.provider === "bitrix24" && crm.placement === dealTabPlacement, crm.dealId);
   const activePlan = useMemo(() => getFloorPlan(project, activeFloorPlanId), [activeFloorPlanId, project]);
+  // Сделка открытой площадки: закреплённая за стендом, иначе та, из которой открыто приложение.
+  const activeStand = activePlan?.standObjectId ? getCanvasObject(project, activePlan.standObjectId) : null;
+  const standDealId = (activeStand ? getObjectStandMeta(activeStand)?.dealId : null) ?? crm.dealId;
   // План стенда читается из сделки только после того, как пришла карта из портала.
   // Раньше чтение успевало пройти по копии из браузера, а карта из портала,
   // в которой предметов нет, приходила следом и стирала только что
@@ -581,6 +586,12 @@ export function App() {
                 <FileText size={16} aria-hidden />
                 Паспорт стенда
               </button>
+              {/* Переход в сделку стенда — рядом с документами: по ним чаще всего и сверяются со сделкой. */}
+              {standDealId ? (
+                <div className="panel-documents__wide">
+                  <OpenDealButton dealId={standDealId} />
+                </div>
+              ) : null}
             </div>
           ) : null
         }
