@@ -1,11 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 34" width="20" height="34">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="20" height="20">
   <title>Розетка 380 В (32/63 А)</title>
-  <!-- Силовая розетка красная, пять контактов — отличается от белых розеток 220 В. Артикул под значком, как у 318. -->
-  <circle cx="10" cy="10" r="8" fill="#fbe3e3" stroke="#c62828" stroke-width="3"/>
-  <circle cx="10" cy="6.2" r="1.2" fill="#c62828"/>
-  <circle cx="6.4" cy="8.9" r="1.2" fill="#c62828"/>
-  <circle cx="13.6" cy="8.9" r="1.2" fill="#c62828"/>
-  <circle cx="7.8" cy="13.2" r="1.2" fill="#c62828"/>
-  <circle cx="12.2" cy="13.2" r="1.2" fill="#c62828"/>
-  <text x="10" y="27" font-family="Arial, sans-serif" font-size="9.0" font-weight="bold" fill="#5b6674" text-anchor="middle" dominant-baseline="central">320</text>
+  <!-- Крупный красный круг во всю рамку, пять контактов — не спутать с розетками 220 В. -->
+  <circle cx="10" cy="10" r="9" fill="#fbe3e3" stroke="#c62828" stroke-width="1.6"/>
+  <circle cx="10" cy="5.2" r="1.4" fill="#c62828"/>
+  <circle cx="5.4" cy="8.6" r="1.4" fill="#c62828"/>
+  <circle cx="14.6" cy="8.6" r="1.4" fill="#c62828"/>
+  <circle cx="7.2" cy="14" r="1.4" fill="#c62828"/>
+  <circle cx="12.8" cy="14" r="1.4" fill="#c62828"/>
 </svg>

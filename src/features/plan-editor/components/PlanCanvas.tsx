@@ -865,7 +865,18 @@ const plainWallIds = new Set(["wall_1", "wall_05", "stena-10", "stena-05"]);
 
 /** Предметы-значки, которые рисуются без белой рамки вокруг картинки. */
 // Закруглённая стойка 202 — четверть кольца: белая квадратная рамка закрывала бы стык с 203.
-const framelessIds = new Set(["veshalka-nastennaya", "korzina", "plazma-50", "stoyka-pod-plazmu", "stoyka-r10"]);
+// Споты и розетки — круги во всю рамку: квадратная рамка вокруг круга лишняя.
+const framelessIds = new Set([
+  "veshalka-nastennaya",
+  "korzina",
+  "plazma-50",
+  "stoyka-pod-plazmu",
+  "stoyka-r10",
+  "spot-bra",
+  "rozetki-1kvt",
+  "rozetki-25kvt",
+  "rozetka-380",
+]);
 
 /** Положение и размер картинки, вписанной в рамку без искажения пропорций. */
 function containIn(image: HTMLImageElement, width: number, height: number) {
