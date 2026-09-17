@@ -697,15 +697,12 @@ function FurnitureShape({ object, selected, onSelect, onDragStart, onDragMove, o
         cornerRadius={2}
       />
       {image ? (
-        <Image
-          image={image}
-          x={shift.x}
-          y={shift.y}
-          width={width}
-          height={height}
-          rotation={meta.rotation}
-          listening={false}
-        />
+        // Картинка вписывается в рамку с сохранением пропорций, по центру.
+        // Раньше её растягивали на всю рамку, и значок «круг с артикулом под ним»
+        // у квадратного спота или розетки сплющивался.
+        <Group x={shift.x} y={shift.y} rotation={meta.rotation} listening={false}>
+          <Image image={image} {...containIn(image, width, height)} />
+        </Group>
       ) : null}
     </Group>
   );
@@ -869,6 +866,18 @@ const plainWallIds = new Set(["wall_1", "wall_05", "stena-10", "stena-05"]);
 /** Предметы-значки, которые рисуются без белой рамки вокруг картинки. */
 // Закруглённая стойка 202 — четверть кольца: белая квадратная рамка закрывала бы стык с 203.
 const framelessIds = new Set(["veshalka-nastennaya", "korzina", "plazma-50", "stoyka-pod-plazmu", "stoyka-r10"]);
+
+/** Положение и размер картинки, вписанной в рамку без искажения пропорций. */
+function containIn(image: HTMLImageElement, width: number, height: number) {
+  const naturalWidth = image.naturalWidth || image.width;
+  const naturalHeight = image.naturalHeight || image.height;
+  if (!naturalWidth || !naturalHeight) return { x: 0, y: 0, width, height };
+
+  const scale = Math.min(width / naturalWidth, height / naturalHeight);
+  const drawWidth = naturalWidth * scale;
+  const drawHeight = naturalHeight * scale;
+  return { x: (width - drawWidth) / 2, y: (height - drawHeight) / 2, width: drawWidth, height: drawHeight };
+}
 
 /** Слой рисования предмета: 1 — свет, поверх всего; 0 — остальное, в порядке добавления. */
 function drawLayer(object: CanvasObject): number {
