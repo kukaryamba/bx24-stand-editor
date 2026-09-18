@@ -74,7 +74,8 @@ export const priceCatalog2026: FurnitureItem[] = [
   { id: "elektroshchit", catalogId: "301", title: "Электрощит 32 А до 10 кВт", category: "power", widthM: 0.4, depthM: 0.3, image: "elektroshchit.svg", source: "price2026" },
   { id: "rozetki-1kvt", catalogId: "318", title: "Блок розеток 220 В, 1 кВт", category: "power", widthM: 0.2, depthM: 0.2, image: "rozetki-1kvt.svg", source: "price2026" },
   { id: "rozetki-25kvt", catalogId: "", title: "Блок розеток 220 В, 2,5 кВт", category: "power", widthM: 0.2, depthM: 0.2, image: "rozetki-25kvt.svg", source: "price2026" },
-  // Добавлена вручную, мимо генератора каталога. Нужен отдельный заказ электрощита.
+  // Добавлены вручную, мимо генератора каталога. Нужен отдельный заказ электрощита.
+  { id: "rozetka-380-16", catalogId: "319", title: "Розетка 380 В (16 А)", category: "power", widthM: 0.2, depthM: 0.2, image: "rozetka-380-16.svg", source: "price2026" },
   { id: "rozetka-380", catalogId: "320", title: "Розетка 380 В (32/63 А)", category: "power", widthM: 0.2, depthM: 0.2, image: "rozetka-380.svg", source: "price2026" },
   { id: "spot-bra", catalogId: "305", title: "Спот-бра 50 Вт", category: "lighting", widthM: 0.2, depthM: 0.2, image: "spot-bra.svg", source: "price2026" },
   { id: "svetilnik-lyuminescentnyy", catalogId: "314", title: "Светильник люминесцентный 40 Вт", category: "lighting", widthM: 1.2, depthM: 0.2, image: "svetilnik-lyuminescentnyy.svg", source: "price2026" },

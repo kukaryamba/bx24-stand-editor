@@ -876,6 +876,7 @@ const framelessIds = new Set([
   "rozetki-1kvt",
   "rozetki-25kvt",
   "rozetka-380",
+  "rozetka-380-16",
 ]);
 
 /** Положение и размер картинки, вписанной в рамку без искажения пропорций. */
