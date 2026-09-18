@@ -127,6 +127,13 @@ type EditorState = {
    * по пропорциям площадки, каждый в центре своей клетки. Одним шагом истории.
    */
   distributeObjects: (objectIds: string[]) => void;
+  /**
+   * Расставляет выбранные предметы рядами, как стулья в зале: поровну
+   * по обе стороны прохода посередине, с отступами от боковых стен
+   * и промежутком между рядами. Блок рядов — по центру площадки по глубине.
+   * Возвращает, сколько не поместилось (0 — поместились все).
+   */
+  arrangeRows: (objectIds: string[], options: { aisleM: number; sideM: number; rowGapM: number; faceBack: boolean }) => number;
   moveFurniture: (objectId: string, origin: Point) => void;
   /**
    * Кладёт предметы (например, из счёта) рядом с площадкой, под её нижним краем,
@@ -485,6 +492,66 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     commitProject(set, get, { ...project, objects: [...project.objects, ...added] });
     const ids = added.map((object) => object.id);
     set({ selectedObjectId: ids.length === 1 ? ids[0] : null, selectedObjectIds: ids, tool: "select" });
+  },
+  arrangeRows: (objectIds, { aisleM, sideM, rowGapM, faceBack }) => {
+    const state = get();
+    const project = state.project;
+    const plan = getFloorPlan(project, state.activeFloorPlanId);
+    if (!project || !plan || plan.kind !== "stand") return 0;
+
+    const ids = new Set(objectIds);
+    const items = project.objects.filter((object) => ids.has(object.id) && object.kind === "equipment" && object.shape.kind === "rectangle");
+    if (items.length === 0) return 0;
+
+    const px = plan.grid.cellSizePx / plan.grid.metersPerCell;
+    const wall = 0.1 * px;
+    // Место под один предмет — по самому крупному из выбранных, в развороте к ряду.
+    const seatWidth = Math.max(...items.map((object) => (object.shape.kind === "rectangle" ? object.shape.width : 0)));
+    const seatDepth = Math.max(...items.map((object) => (object.shape.kind === "rectangle" ? object.shape.height : 0)));
+
+    const aisle = Math.max(0, aisleM) * px;
+    const side = Math.max(0, sideM) * px;
+    const rowGap = Math.max(0, rowGapM) * px;
+    const halfWidth = (plan.width - 2 * wall - 2 * side - aisle) / 2;
+    const perSide = Math.max(0, Math.floor((halfWidth + 0.01) / seatWidth));
+    if (perSide === 0) {
+      set({ validationMessage: "Ряд не помещается: уменьшите проход или отступы от стен." });
+      return items.length;
+    }
+
+    const perRow = perSide * 2;
+    const rowsFit = Math.max(1, Math.floor((plan.height - 2 * wall + rowGap) / (seatDepth + rowGap)));
+    const rows = Math.min(Math.ceil(items.length / perRow), rowsFit);
+    const placed = Math.min(items.length, rows * perRow);
+    const blockHeight = rows * seatDepth + (rows - 1) * rowGap;
+    const top = Math.max(wall, (plan.height - blockHeight) / 2);
+    // Половинки ряда прижаты к проходу: так проход ровно посередине, а лишнее место — у стен.
+    const aisleLeft = plan.width / 2 - aisle / 2;
+    const aisleRight = plan.width / 2 + aisle / 2;
+
+    const positions = new Map<string, Point>();
+    items.slice(0, placed).forEach((object, index) => {
+      const row = Math.floor(index / perRow);
+      const inRow = index % perRow;
+      const leftHalf = inRow < perSide;
+      const k = leftHalf ? perSide - 1 - inRow : inRow - perSide;
+      const x = leftHalf ? aisleLeft - (k + 1) * seatWidth : aisleRight + k * seatWidth;
+      positions.set(object.id, { x, y: top + row * (seatDepth + rowGap) });
+    });
+
+    // Спинка у значка стула сверху: лицом к задней стене — разворот на 180°.
+    const rotation = faceBack ? 180 : 0;
+    commitProject(set, get, {
+      ...project,
+      objects: project.objects.map((object) => {
+        const origin = positions.get(object.id);
+        const meta = getObjectFurnitureMeta(object);
+        if (!origin || object.shape.kind !== "rectangle" || !meta) return object;
+        return { ...object, shape: { ...object.shape, origin }, meta: { ...object.meta, furniture: { ...meta, rotation } } };
+      }),
+    });
+    set({ validationMessage: null });
+    return items.length - placed;
   },
   distributeObjects: (objectIds) => {
     const state = get();

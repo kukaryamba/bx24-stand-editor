@@ -1448,3 +1448,30 @@ p {
   flex-direction: column;
   gap: 14px;
 }
+
+/* Расстановка рядами: настройки сеткой два на два. */
+.rows-arranger {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #e3e7ed;
+}
+
+.rows-arranger h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.rows-arranger__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.rows-arranger__grid label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: #374151;
+}

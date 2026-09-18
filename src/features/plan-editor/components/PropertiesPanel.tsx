@@ -1,6 +1,6 @@
 import { Copy, ExternalLink, LayoutGrid, Trash2 } from "lucide-react";
 import { dealUrl } from "../../../shared/crm/bitrixApi";
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { getFurnitureItem } from "../../../shared/domain/furniture";
 import {
   friezeMaxChars,
@@ -84,6 +84,62 @@ function StandNumberField({ standObjectId, number, dealId }: { standObjectId: st
  * она перекрыла бы редактор. Отдельная вкладка позволяет держать рядом и план,
  * и карточку клиента.
  */
+/**
+ * Расстановка рядами с проходом — для зала со стульями. Настройки по
+ * умолчанию — обычные для выставочной презентации: проход 1 м напротив
+ * входа, 40 см от боковых стен, 40 см между рядами (90 см спинка к спинке).
+ */
+function RowsArranger({ objectIds }: { objectIds: string[] }) {
+  const arrangeRows = useEditorStore((state) => state.arrangeRows);
+  const [aisleM, setAisleM] = useState(1);
+  const [sideM, setSideM] = useState(0.4);
+  const [rowGapM, setRowGapM] = useState(0.4);
+  const [faceBack, setFaceBack] = useState(true);
+  const [note, setNote] = useState<string | null>(null);
+
+  const number = (value: string, fallback: number) => {
+    const parsed = Number(value.replace(",", "."));
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+  };
+
+  return (
+    <div className="rows-arranger">
+      <h3>Рядами с проходом</h3>
+      <div className="rows-arranger__grid">
+        <label>
+          Проход, м
+          <input type="number" min={0} step={0.1} value={aisleM} onChange={(event) => setAisleM(number(event.target.value, aisleM))} />
+        </label>
+        <label>
+          От стен, м
+          <input type="number" min={0} step={0.1} value={sideM} onChange={(event) => setSideM(number(event.target.value, sideM))} />
+        </label>
+        <label>
+          Между рядами, м
+          <input type="number" min={0} step={0.1} value={rowGapM} onChange={(event) => setRowGapM(number(event.target.value, rowGapM))} />
+        </label>
+        <label>
+          Лицом к
+          <select value={faceBack ? "back" : "front"} onChange={(event) => setFaceBack(event.target.value === "back")}>
+            <option value="back">задней стене</option>
+            <option value="front">входу</option>
+          </select>
+        </label>
+      </div>
+      <button
+        className="primary-action"
+        onClick={() => {
+          const left = arrangeRows(objectIds, { aisleM, sideM, rowGapM, faceBack });
+          setNote(left > 0 ? `Не поместилось: ${left} — они остались на месте.` : null);
+        }}
+      >
+        Расставить рядами с проходом
+      </button>
+      {note ? <p className="stand-hint">{note}</p> : <p className="stand-hint">Проход — посередине площадки, ряды — по центру по глубине. Отменить — Undo.</p>}
+    </div>
+  );
+}
+
 export function OpenDealButton({ dealId }: { dealId: string }) {
   const url = dealUrl(dealId);
 
@@ -141,6 +197,7 @@ export function PropertiesPanel({ documents }: { documents?: ReactNode }) {
                 Распределить по площадке
               </button>
               <p className="stand-hint">Расставит выбранные предметы рядами равномерно по всей площадке. Отменить — Undo.</p>
+              <RowsArranger objectIds={selectedObjectIds} />
             </>
           ) : null}
 
