@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="20" height="20">
+  <title>Розетка 380 В (16 А)</title>
+  <!-- Как розетка 380 В на 32/63 А (320), но с «16» посередине — чтобы на плане их различать. -->
+  <circle cx="10" cy="10" r="9" fill="#fbe3e3" stroke="#c62828" stroke-width="1.6"/>
+  <circle cx="10" cy="3.9" r="1.1" fill="#c62828"/>
+  <circle cx="4.4" cy="8" r="1.1" fill="#c62828"/>
+  <circle cx="15.6" cy="8" r="1.1" fill="#c62828"/>
+  <circle cx="6.4" cy="14.8" r="1.1" fill="#c62828"/>
+  <circle cx="13.6" cy="14.8" r="1.1" fill="#c62828"/>
+  <text x="10" y="10.6" font-family="Arial, sans-serif" font-size="5.6" font-weight="bold" fill="#c62828" text-anchor="middle" dominant-baseline="central">16</text>
+</svg>

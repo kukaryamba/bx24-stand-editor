@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="20" height="20">
+  <title>Розетка 380 В (32/63 А)</title>
+  <!-- Крупный красный круг во всю рамку, пять контактов — не спутать с розетками 220 В. -->
+  <circle cx="10" cy="10" r="9" fill="#fbe3e3" stroke="#c62828" stroke-width="1.6"/>
+  <circle cx="10" cy="5.2" r="1.4" fill="#c62828"/>
+  <circle cx="5.4" cy="8.6" r="1.4" fill="#c62828"/>
+  <circle cx="14.6" cy="8.6" r="1.4" fill="#c62828"/>
+  <circle cx="7.2" cy="14" r="1.4" fill="#c62828"/>
+  <circle cx="12.8" cy="14" r="1.4" fill="#c62828"/>
+</svg>
