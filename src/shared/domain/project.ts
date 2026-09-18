@@ -223,10 +223,14 @@ export function getStandOutline(project: ExhibitionProject | null, plan: FloorPl
     (Math.abs(point.y - minY) < tolerance || Math.abs(point.y - minY - height) < tolerance);
   if (points.length === 4 && points.every(onCorner)) return null;
 
-  return points.map((point) => ({
-    x: ((point.x - minX) / width) * plan.width,
-    y: ((point.y - minY) / height) * plan.height,
-  }));
+  // Площадку могли развернуть: контур поворачиваем так же, на четверти против часовой.
+  const turns = (((plan.turns ?? 0) % 4) + 4) % 4;
+  return points.map((point) => {
+    let u = (point.x - minX) / width;
+    let v = (point.y - minY) / height;
+    for (let i = 0; i < turns; i += 1) [u, v] = [v, 1 - u];
+    return { x: u * plan.width, y: v * plan.height };
+  });
 }
 
 /** Площадь стенда, м²: по настоящему контуру, если стенд не прямоугольный. */

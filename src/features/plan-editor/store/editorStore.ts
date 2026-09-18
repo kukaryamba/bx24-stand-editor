@@ -179,6 +179,13 @@ type EditorState = {
   /** Расставляет стены по типовой схеме, заменяя прежние. */
   /** fresh — поставить схему в исходном повороте, даже если она уже стоит (например, из счёта). */
   applyStandTemplate: (templateId: StandTemplateId, fresh?: boolean) => void;
+  /**
+   * Разворачивает площадку стенда целиком на 90°: против часовой (ccw) или
+   * по часовой. Ширина и глубина меняются местами, все предметы — стены,
+   * мебель, фризы — переезжают и поворачиваются вместе с ней, контур тоже.
+   * Стенд на карте выставки не трогается. Одним шагом истории.
+   */
+  rotateStandPlan: (direction: "ccw" | "cw") => void;
   /** Заменяет всё на площадке базовой комплектацией по площади. Одним шагом истории. Без id — открытая площадка. */
   applyBaseKit: (floorPlanId?: string) => void;
   zoomIn: () => void;
@@ -948,6 +955,48 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...project,
       floorPlans: project.floorPlans.map((item) => (item.id === plan.id ? nextPlan : item)),
     });
+  },
+  rotateStandPlan: (direction) => {
+    const state = get();
+    const project = state.project;
+    const plan = getFloorPlan(project, state.activeFloorPlanId);
+    if (!project || !plan || plan.kind !== "stand") return;
+
+    const W = plan.width;
+    const H = plan.height;
+    const ccw = direction === "ccw";
+
+    const objects = project.objects.map((object) => {
+      const meta = getObjectFurnitureMeta(object);
+      if (object.floorPlanId !== plan.id || !meta || object.shape.kind !== "rectangle") return object;
+
+      // Рамка на плане — по её левому верхнему углу и размеру с учётом поворота.
+      const turned = meta.rotation === 90 || meta.rotation === 270;
+      const w = turned ? object.shape.height : object.shape.width;
+      const h = turned ? object.shape.width : object.shape.height;
+      const { x, y } = object.shape.origin;
+      // Против часовой точка (x, y) переходит в (y, W - x), по часовой — в (H - y, x).
+      const origin = ccw ? { x: y, y: W - x - w } : { x: H - y - h, y: x };
+      const rotation = (meta.rotation + (ccw ? 270 : 90)) % 360;
+      return { ...object, shape: { ...object.shape, origin }, meta: { ...object.meta, furniture: { ...meta, rotation } } };
+    });
+
+    const turns = ((((plan.turns ?? 0) + (ccw ? 1 : -1)) % 4) + 4) % 4;
+    const size = getStandSizeMeters(plan);
+    const stand = plan.standObjectId ? getCanvasObject(project, plan.standObjectId) : null;
+    const standNumber = stand ? (getObjectStandMeta(stand)?.number ?? stand.name) : null;
+    const nextPlan: FloorPlan = {
+      ...plan,
+      width: H,
+      height: W,
+      turns,
+      title: standPlanTitle(standNumber, size.depth, size.width),
+      startView: undefined,
+    };
+
+    const next = { ...project, objects, floorPlans: project.floorPlans.map((item) => (item.id === plan.id ? nextPlan : item)) };
+    commitProject(set, get, next);
+    set({ selectedObjectId: null, selectedObjectIds: [], lastTemplate: null, viewport: fitViewport(next, plan.id, state.stageSize) });
   },
   applyBaseKit: (floorPlanId) => {
     const state = get();

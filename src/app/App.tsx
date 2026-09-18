@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, FileText, Grid2x2, Hand, ImageUp, MousePointer2, PenTool, Redo2, Undo2, ZoomIn, ZoomOut } from "lucide-react";
+import { Download, FileText, Grid2x2, Hand, ImageUp, MousePointer2, PenTool, Redo2, RotateCcw, RotateCw, Undo2, ZoomIn, ZoomOut } from "lucide-react";
 import { DealSyncPanel } from "../features/plan-editor/components/DealSyncPanel";
 import { FurniturePalette } from "../features/plan-editor/components/FurniturePalette";
 import { InstallScreen } from "../features/plan-editor/components/InstallScreen";
@@ -95,6 +95,7 @@ export function App() {
   const applyStandTemplate = useEditorStore((state) => state.applyStandTemplate);
   const lastTemplate = useEditorStore((state) => state.lastTemplate);
   const applyBaseKit = useEditorStore((state) => state.applyBaseKit);
+  const rotateStandPlan = useEditorStore((state) => state.rotateStandPlan);
   const setFloorPlanBackground = useEditorStore((state) => state.setFloorPlanBackground);
   const undo = useEditorStore((state) => state.undo);
   const redo = useEditorStore((state) => state.redo);
@@ -438,6 +439,19 @@ export function App() {
               Добавить оборудование из счетов PDF
             </button>
             <p>Доп. оборудование из счетов встанет под площадкой — дальше расставьте его сами.</p>
+
+            <h2>Повернуть стенд</h2>
+            <div className="stand-rotate">
+              <button type="button" onClick={() => rotateStandPlan("ccw")} title="Против часовой стрелки">
+                <RotateCcw size={16} aria-hidden />
+                На 90° против часовой
+              </button>
+              <button type="button" onClick={() => rotateStandPlan("cw")} title="По часовой стрелке">
+                <RotateCw size={16} aria-hidden />
+                На 90° по часовой
+              </button>
+            </div>
+            <p>Поворачивается вся площадка со всеми предметами; ширина и глубина меняются местами. Стенд на общем плане остаётся как есть.</p>
 
             <h2>Схема стенда</h2>
             <div className="stand-templates stand-schemes">
