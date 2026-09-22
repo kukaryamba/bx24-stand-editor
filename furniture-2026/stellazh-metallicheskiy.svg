@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 50" width="100" height="50">
+  <title>Стеллаж металлический 1 x 0,5 м, h=2,5 м</title>
+  <!--
+    Вид сверху: полка, стойки по углам и артикул внутри. Нарисован на 90 %
+    рамки, по центру: на плане стеллаж должен помещаться между стенами прохода,
+    а в смете и паспорте его размер остаётся по прайсу — 1 x 0,5 м.
+  -->
+  <rect x="6.5" y="4" width="87" height="42" fill="#f7f8fa" stroke="#5b6674" stroke-width="3"/>
+  <rect x="6.5" y="4" width="7.5" height="7.5" fill="#5b6674"/><rect x="86" y="4" width="7.5" height="7.5" fill="#5b6674"/>
+  <rect x="6.5" y="38.5" width="7.5" height="7.5" fill="#5b6674"/><rect x="86" y="38.5" width="7.5" height="7.5" fill="#5b6674"/>
+  <text x="50" y="26" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#5b6674" text-anchor="middle" dominant-baseline="central">222</text>
+</svg>

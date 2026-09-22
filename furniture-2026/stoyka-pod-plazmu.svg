@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 15" width="60" height="15">
+  <title>Стойка напольная под панель</title>
+  <!-- Вид сверху: узкое основание и стойка посередине. Пропорции как у предмета, 0,6 x 0,15 м. -->
+  <rect x="1" y="1" width="58" height="13" rx="2" fill="#f7f8fa" stroke="#111827" stroke-width="2"/>
+  <rect x="25" y="4" width="10" height="7" fill="#111827"/>
+</svg>

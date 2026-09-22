@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <title>Стойка информационная закруглённая R-1 м</title>
+  <!--
+    Вид сверху: четверть кольца — внешний радиус 1 м, глубина стойки 0,5 м,
+    как у прямой стойки 203. Торцы — слева вверху (вертикальный, 0,5 м)
+    и внизу справа (горизонтальный, 0,5 м): к ним вплотную встают стойки 203,
+    прямая и повёрнутая. Угол скругления — в левом нижнем углу рамки.
+  -->
+  <path d="M1.5 1.5 A98.5 98.5 0 0 1 98.5 98.5 L50 98.5 A48.5 48.5 0 0 0 1.5 50 Z" fill="#f7f8fa" stroke="#5b6674" stroke-width="3" stroke-linejoin="round"/>
+  <text x="54" y="46" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#5b6674" text-anchor="middle" dominant-baseline="central">202</text>
+</svg>

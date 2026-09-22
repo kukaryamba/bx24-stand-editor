@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 30" width="40" height="30">
+  <title>Электрощит 32 А до 10 кВт</title>
+  <!-- Корпус щита со значком напряжения и артикулом. -->
+  <rect x="1.5" y="1.5" width="37" height="27" rx="2" fill="#f7f8fa" stroke="#5b6674" stroke-width="3"/>
+  <path d="M10.5 5 L5.5 15.5 H9.5 L7.5 25 L14 13 H10 L12.5 5 Z" fill="#e8a900" stroke="#5b6674" stroke-width="1"/>
+  <text x="26" y="15.5" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#5b6674" text-anchor="middle" dominant-baseline="central">301</text>
+</svg>

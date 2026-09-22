@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60" width="60" height="60">
+  <title>Ковровое покрытие</title>
+  <!-- Значок для палитры; на плане ковёр рисуется заливкой цвета ковра. -->
+  <rect x="2" y="2" width="56" height="56" rx="3" fill="#e9ebee" stroke="#8e9399" stroke-width="2" stroke-dasharray="5 3"/>
+  <path d="M10 44 L44 10 M20 50 L50 20 M10 30 L30 10" stroke="#b6bbc2" stroke-width="2"/>
+</svg>
