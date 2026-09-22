@@ -21,6 +21,8 @@ export function buildSpecification(project: ExhibitionProject | null, floorPlanI
   const pxPerMeter = plan ? plan.grid.cellSizePx / plan.grid.metersPerCell : 1;
   let friezeLengthM = 0;
   let filmLengthM = 0;
+  // Ковёр — по настоящей площади каждого прямоугольника.
+  const carpetAreaM2 = new Map<string, number>();
 
   for (const object of objects) {
     const meta = getObjectFurnitureMeta(object);
@@ -31,6 +33,10 @@ export function buildSpecification(project: ExhibitionProject | null, floorPlanI
     if (object.shape.kind !== "rectangle") continue;
     if (item?.frieze) friezeLengthM += object.shape.width / pxPerMeter;
     if (item?.film) filmLengthM += object.shape.width / pxPerMeter;
+    if (item?.carpet) {
+      const area = (object.shape.width / pxPerMeter) * (object.shape.height / pxPerMeter);
+      carpetAreaM2.set(meta.itemId, (carpetAreaM2.get(meta.itemId) ?? 0) + area);
+    }
   }
 
   const rows: SpecificationRow[] = [];
@@ -41,7 +47,13 @@ export function buildSpecification(project: ExhibitionProject | null, floorPlanI
     if (!item) continue;
 
     // Фриз и оклейку заказывают погонными метрами, остальное — штуками.
-    const quantity = item.frieze ? round1(friezeLengthM) : item.film ? round1(filmLengthM) : count;
+    const quantity = item.frieze
+      ? round1(friezeLengthM)
+      : item.film
+        ? round1(filmLengthM)
+        : item.carpet
+          ? round1(carpetAreaM2.get(itemId) ?? 0)
+          : count;
     const priceRub = item.priceRub;
     rows.push({
       itemId,
@@ -49,7 +61,7 @@ export function buildSpecification(project: ExhibitionProject | null, floorPlanI
       title: item.title,
       category: item.category,
       quantity,
-      unit: item.frieze || item.film ? "м" : "шт",
+      unit: item.frieze || item.film ? "м" : item.carpet ? "м²" : "шт",
       priceRub,
       sumRub: priceRub === undefined ? undefined : priceRub * quantity,
     });

@@ -153,6 +153,8 @@ type EditorState = {
    * Меняет надпись и длину фризовой панели. Длина — в пикселях плана,
    * вдоль панели; при повороте она остаётся длиной, а не шириной рамки.
    */
+  /** Задаёт размер ковра в метрах — ширину и глубину на месте. */
+  resizeCarpet: (objectId: string, widthM: number, depthM: number) => void;
   /** label: null — у панели нет своей надписи, берётся общая надпись стенда. Пустая строка — своя, пустая. */
   updateFrieze: (objectId: string, patch: { label?: string | null; lengthPx?: number }) => void;
   /**
@@ -712,6 +714,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       objects: project.objects.map((item) => (item.id === objectId ? nextObject : item)),
     });
   },
+  resizeCarpet: (objectId, widthM, depthM) => {
+    const project = get().project;
+    const object = getCanvasObject(project, objectId);
+    const plan = object ? getFloorPlan(project, object.floorPlanId) : null;
+    if (!project || !object || !plan || object.shape.kind !== "rectangle" || widthM <= 0 || depthM <= 0) return;
+
+    const px = plan.grid.cellSizePx / plan.grid.metersPerCell;
+    const nextObject: CanvasObject = { ...object, shape: { ...object.shape, width: widthM * px, height: depthM * px } };
+    commitProject(set, get, { ...project, objects: project.objects.map((item) => (item.id === objectId ? nextObject : item)) });
+  },
   updateFrieze: (objectId, patch) => {
     const project = get().project;
     const object = getCanvasObject(project, objectId);
@@ -1208,7 +1220,7 @@ function fitViewport(project: ExhibitionProject | null, floorPlanId: string | nu
 function withCatalogSize(object: CanvasObject, plan: FloorPlan | null): CanvasObject {
   const meta = getObjectFurnitureMeta(object);
   const item = meta ? getFurnitureItem(meta.itemId) : undefined;
-  if (!plan || !item || item.frieze || item.film || item.category === "walls" || object.shape.kind !== "rectangle") return object;
+  if (!plan || !item || item.frieze || item.film || item.carpet || item.category === "walls" || object.shape.kind !== "rectangle") return object;
 
   const pxPerMeter = plan.grid.cellSizePx / plan.grid.metersPerCell;
   const width = item.widthM * pxPerMeter;

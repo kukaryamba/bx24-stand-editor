@@ -162,6 +162,7 @@ export function PropertiesPanel({ documents }: { documents?: ReactNode }) {
   const selectedObjectIds = useEditorStore((state) => state.selectedObjectIds);
   const deleteObjects = useEditorStore((state) => state.deleteObjects);
   const distributeObjects = useEditorStore((state) => state.distributeObjects);
+  const resizeCarpet = useEditorStore((state) => state.resizeCarpet);
   const duplicateObjects = useEditorStore((state) => state.duplicateObjects);
   const crm = useEditorStore((state) => state.crm);
   const validationMessage = useEditorStore((state) => state.validationMessage);
@@ -281,6 +282,42 @@ export function PropertiesPanel({ documents }: { documents?: ReactNode }) {
             </>
           ) : null}
 
+          {furnitureItem.carpet && object.shape.kind === "rectangle" ? (
+            <>
+              <div className="rows-arranger__grid">
+                <label>
+                  Ширина, м
+                  <input
+                    type="number"
+                    min={0.5}
+                    step={0.5}
+                    value={round2(object.shape.width / pxPerMeter)}
+                    onChange={(event) => {
+                      const meters = Number(event.target.value);
+                      if (meters > 0 && object.shape.kind === "rectangle") resizeCarpet(object.id, meters, object.shape.height / pxPerMeter);
+                    }}
+                  />
+                </label>
+                <label>
+                  Глубина, м
+                  <input
+                    type="number"
+                    min={0.5}
+                    step={0.5}
+                    value={round2(object.shape.height / pxPerMeter)}
+                    onChange={(event) => {
+                      const meters = Number(event.target.value);
+                      if (meters > 0 && object.shape.kind === "rectangle") resizeCarpet(object.id, object.shape.width / pxPerMeter, meters);
+                    }}
+                  />
+                </label>
+              </div>
+              <p className="stand-hint">
+                Пока на площадке лежит ковёр, цветом ковра закрашен только он. Цвет — в анкете паспорта. В спецификации — в м².
+              </p>
+            </>
+          ) : null}
+
           <dl className="stand-facts">
             <div>
               <dt>Название</dt>
@@ -291,7 +328,9 @@ export function PropertiesPanel({ documents }: { documents?: ReactNode }) {
               <dd>
                 {(furnitureItem.frieze || furnitureItem.film) && object.shape.kind === "rectangle"
                   ? `${String(round2(object.shape.width / pxPerMeter)).replace(".", ",")} м в длину`
-                  : `${String(furnitureItem.widthM).replace(".", ",")} x ${String(furnitureItem.depthM).replace(".", ",")} м`}
+                  : furnitureItem.carpet && object.shape.kind === "rectangle"
+                    ? `${String(round2(object.shape.width / pxPerMeter)).replace(".", ",")} x ${String(round2(object.shape.height / pxPerMeter)).replace(".", ",")} м`
+                    : `${String(furnitureItem.widthM).replace(".", ",")} x ${String(furnitureItem.depthM).replace(".", ",")} м`}
               </dd>
             </div>
             <div>

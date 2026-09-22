@@ -66,6 +66,10 @@ export function PlanCanvas() {
   // Цвет надписи фриза — из анкеты, по умолчанию королевский синий 049. Только на площадке стенда.
   const friezeTextColor = planStand ? friezeTextFill(getObjectStandMeta(planStand)?.passport?.friezeColor) : null;
   const standOutline = useMemo(() => getStandOutline(project, floorPlan), [floorPlan, project]);
+  const hasCarpetPiece = objects.some((object) => {
+    const meta = getObjectFurnitureMeta(object);
+    return Boolean(meta && getFurnitureItem(meta.itemId)?.carpet);
+  });
   const backgroundImage = useImage(floorPlan?.background?.imageUrl ?? "");
 
   useEffect(() => {
@@ -422,11 +426,12 @@ export function PlanCanvas() {
           <Rect
             width={floorPlan.width}
             height={floorPlan.height}
-            fill={floorPlan.kind === "stand" && !standOutline ? carpetFill(standCarpet) : "#f8fafb"}
+            fill={floorPlan.kind === "stand" && !standOutline && !hasCarpetPiece ? carpetFill(standCarpet) : "#f8fafb"}
             stroke="#c8ced6"
             strokeWidth={2}
           />
-          {standOutline ? <Line points={flattenPoints(standOutline)} closed fill={carpetFill(standCarpet)} /> : null}
+          {/* Лежит ковёр отдельным предметом — площадку целиком не закрашиваем: ковёр только там, где он. */}
+          {standOutline && !hasCarpetPiece ? <Line points={flattenPoints(standOutline)} closed fill={carpetFill(standCarpet)} /> : null}
           {visibleLayerIds.has(`${floorPlan.id}-background`) && backgroundImage ? (
             <Image image={backgroundImage} width={floorPlan.width} height={floorPlan.height} opacity={0.78} />
           ) : null}
@@ -481,6 +486,7 @@ export function PlanCanvas() {
                 key={object.id}
                 object={object}
                 selected={selectedObjectIds.includes(object.id)}
+                carpetColor={carpetFill(standCarpet)}
                 onSelect={(additive) => selectObject(object.id, additive)}
                 onDragStart={(event) => handleDragStart(object, event)}
                 onDragMove={(event) => handleDragMove(object, event)}
@@ -624,10 +630,12 @@ function StandShape({ object, company, selected, currentDeal, draggable, cellSiz
 type FurnitureShapeProps = {
   object: CanvasObject;
   selected: boolean;
+  /** Цвет ковра площадки — им закрашивается предмет «ковёр». */
+  carpetColor: string;
   onSelect: (additive: boolean) => void;
 } & DragHandlers;
 
-function FurnitureShape({ object, selected, onSelect, onDragStart, onDragMove, onDragEnd }: FurnitureShapeProps) {
+function FurnitureShape({ object, selected, carpetColor, onSelect, onDragStart, onDragMove, onDragEnd }: FurnitureShapeProps) {
   const meta = getObjectFurnitureMeta(object);
   const item = meta ? getFurnitureItem(meta.itemId) : undefined;
   const image = useImage(item ? getFurnitureImageUrl(item) : "");
@@ -643,6 +651,32 @@ function FurnitureShape({ object, selected, onSelect, onDragStart, onDragMove, o
   const shift = imageShift(meta.rotation, width, height);
   const look = plainWallIds.has(meta.itemId) ? "wall" : meta.itemId === "dver-razdvizhnaya" ? "sliding-door" : "picture";
   const frameless = framelessIds.has(meta.itemId);
+
+  if (item?.carpet) {
+    // Ковёр — заливка цвета ковра из анкеты без рамки; у выделенного — пунктир.
+    return (
+      <Group
+        id={object.id}
+        x={origin.x}
+        y={origin.y}
+        draggable
+        onClick={(event) => onSelect(event.evt.ctrlKey || event.evt.metaKey)}
+        onTap={() => onSelect(false)}
+        onDragStart={onDragStart}
+        onDragMove={onDragMove}
+        onDragEnd={onDragEnd}
+      >
+        <Rect
+          width={boxWidth}
+          height={boxHeight}
+          fill={carpetColor}
+          stroke={selected ? "#0b57d0" : undefined}
+          strokeWidth={2}
+          dash={[8, 5]}
+        />
+      </Group>
+    );
+  }
 
   if (look !== "picture") {
     // Стены и раздвижная дверь — условные обозначения, как на строительном плане:
@@ -893,10 +927,12 @@ function containIn(image: HTMLImageElement, width: number, height: number) {
   return { x: (width - drawWidth) / 2, y: (height - drawHeight) / 2, width: drawWidth, height: drawHeight };
 }
 
-/** Слой рисования предмета: 1 — свет, поверх всего; 0 — остальное, в порядке добавления. */
+/** Слой рисования: −1 — ковёр, под всем; 1 — свет, поверх всего; 0 — остальное, в порядке добавления. */
 function drawLayer(object: CanvasObject): number {
   const meta = getObjectFurnitureMeta(object);
-  return meta && getFurnitureItem(meta.itemId)?.category === "lighting" ? 1 : 0;
+  const item = meta ? getFurnitureItem(meta.itemId) : undefined;
+  if (item?.carpet) return -1;
+  return item?.category === "lighting" ? 1 : 0;
 }
 
 /**

@@ -26,6 +26,8 @@ export const priceCatalog2026: FurnitureItem[] = [
   // Оклейка плёнкой ORACAL из раздела художественно-оформительских работ.
   // Артикула в форме нет. Устроена как фриз: тянется, ставится и снаружи стенда.
   { id: "okleyka", catalogId: "", title: "Оклейка плёнкой", category: "walls", widthM: 1, depthM: 0.3, image: "okleyka.svg", source: "price2026", film: true },
+  // Ковёр на части площадки: размер задают на месте, считается в м². Добавлен вручную.
+  { id: "kovyor", catalogId: "", title: "Ковровое покрытие", category: "other", widthM: 3, depthM: 3, image: "kovyor.svg", source: "price2026", carpet: true },
   { id: "polka-1x03", catalogId: "115", title: "Полка ЛДСП 1 x 0,3 м", category: "storage", widthM: 1, depthM: 0.3, image: "polka-1x03.svg", source: "price2026" },
   { id: "polka-1x05", catalogId: "", title: "Полка ЛДСП 1 x 0,5 м", category: "storage", widthM: 1, depthM: 0.5, image: "polka-1x05.svg", source: "price2026" },
   { id: "polka-naklonnaya", catalogId: "", title: "Полка ЛДСП наклонная 1 x 0,3 м", category: "storage", widthM: 1, depthM: 0.3, image: "polka-naklonnaya.svg", source: "price2026" },
